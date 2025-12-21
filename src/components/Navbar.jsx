@@ -280,14 +280,6 @@ export default function Navbar() {
 
         {/* Mobile Icons */}
         <div className="flex md:hidden items-center gap-4">
-          {/* Mobile Search Icon */}
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setSearchOpen(!searchOpen)}
-            className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
-          >
-            <Search className="w-5 h-5 text-[#de5422]" />
-          </motion.button>
 
           {/* Cart Icon (only if logged in) */}
           {isLoggedIn && (
@@ -319,36 +311,6 @@ export default function Navbar() {
           </motion.button>
         </div>
       </div>
-
-      {/* Mobile Search Bar */}
-      <AnimatePresence>
-        {searchOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="md:hidden bg-white border-t border-gray-200 px-4 py-3"
-          >
-            <form onSubmit={handleSearch} className="relative">
-              <input
-                ref={searchRef}
-                type="text"
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full border border-gray-300 rounded-full pl-4 pr-10 py-2 outline-none focus:ring-1 focus:ring-[#de5422] focus:border-transparent"
-              />
-              <button
-                type="submit"
-                className="absolute right-0 top-1/2 -translate-y-1/2 bg-[#de5422] p-1.5 rounded-r-full"
-              >
-                <Search className="w-6 h-8 text-white" />
-              </button>
-            </form>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Mobile Menu */}
       <AnimatePresence>

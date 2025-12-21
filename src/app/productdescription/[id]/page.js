@@ -280,10 +280,6 @@ export default function ProductPage() {
   let descriptionHTML = "<p>No description available.</p>";
   try {
     if (product?.description) {
-      // Assuming description is now HTML string from Tiptap
-      // If it's a JSON string (legacy Draft.js), it might need migration, 
-      // but without draftjs-to-html we treat it as is or handle simple cases.
-      // For now, we assume migration/compat is handled or new data is HTML.
       descriptionHTML = product.description;
     }
   } catch (err) {
@@ -466,9 +462,9 @@ export default function ProductPage() {
                                 [custom.type]: e.target.value,
                               })
                             }
-                            className={`w-full px-3 py-2 border rounded-lg bg-white text-gray-700 transition-colors focus:ring-2 focus:ring-[#de5422] focus:border-[#de5422] cursor-pointer ${customizationErrors[custom.type]
+                            className={`w-full px-3 py-2 pr-10 border rounded-lg bg-white text-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-[#de5422] focus:border-transparent cursor-pointer appearance-none ${customizationErrors[custom.type]
                               ? "border-red-500 ring-1 ring-red-400"
-                              : "border-gray-300"
+                              : "border-gray-300 hover:border-gray-400"
                               }`}
                           >
                             <option value="" className="text-gray-400">
@@ -486,21 +482,23 @@ export default function ProductPage() {
                             ))}
                           </select>
 
-                          {/* Dropdown Arrow */}
-                          <svg
-                            className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 9l-7 7-7-7"
-                            />
-                          </svg>
+                          {/* Custom Dropdown Arrow - Only One */}
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                            <svg
+                              className="w-4 h-4 text-gray-500"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 9l-7 7-7-7"
+                              />
+                            </svg>
+                          </div>
                         </div>
 
                         {/* Error Message */}
