@@ -146,28 +146,29 @@ export default function HeroSlider() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Text Overlay - Enhanced for visibility */}
-      <div className="absolute inset-0 flex items-end md:items-center z-20 pb-96 md:pb-0">
+      {/* Text Overlay - Centered on all screens */}
+      <div className="absolute inset-0 flex items-center justify-center z-20 px-4">
         <motion.div
-          className="text-center px-4 sm:px-6 w-full max-w-5xl mx-auto"
+          className="text-center w-full max-w-5xl mx-auto"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.8 }}
         >
-          {/* Tagline with enhanced contrast */}
+          {/* Tagline - Only show on desktop, hidden on mobile */}
           <motion.div
             className="inline-block mb-4 md:mb-6 px-4 py-2 rounded-full 
              bg-gradient-to-br from-orange-600 to-amber-600 
-             shadow-xl backdrop-blur-md border border-white/20"
+             shadow-xl backdrop-blur-md border border-white/20
+             hidden md:block"
           >
             <span className="text-white font-bold text-sm md:text-base tracking-wide">
               {images[current].tagline || "Premium Collection"}
             </span>
           </motion.div>
 
-          {/* Title with enhanced shadow and contrast */}
+          {/* Title */}
           <motion.h1
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-3 md:mb-4 leading-tight"
+            className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-3 md:mb-4 leading-tight px-2"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7, duration: 0.8 }}
@@ -183,14 +184,14 @@ export default function HeroSlider() {
             {images[current].title || "Discover Excellence"}
           </motion.h1>
 
-          {/* Description with enhanced readability */}
+          {/* Description - Hidden on mobile, shown on desktop */}
           <motion.p
-            className="text-base sm:text-lg md:text-xl lg:text-2xl mb-6 md:mb-8 max-w-2xl mx-auto leading-relaxed font-medium px-2"
+            className="hidden md:block text-lg md:text-xl lg:text-2xl mb-6 md:mb-8 max-w-2xl mx-auto leading-relaxed font-medium px-2"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.9, duration: 0.8 }}
             style={{
-              color: "#f8fafc", // Slightly off-white for better readability
+              color: "#f8fafc",
               textShadow: `
                 0 1px 2px rgba(0, 0, 0, 0.6),
                 0 2px 4px rgba(0, 0, 0, 0.5)
@@ -201,21 +202,21 @@ export default function HeroSlider() {
               "Experience the perfect blend of quality and elegance"}
           </motion.p>
 
-          {/* Buttons with enhanced visibility */}
+          {/* Buttons */}
           <motion.div
-            className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center"
+            className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center mt-4 md:mt-0"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 1.1, duration: 0.5 }}
           >
             <button
               onClick={() => router.push("/productlisting")}
-              className="group relative cursor-pointer px-6 md:px-8 py-3 md:py-4 
-             rounded-xl text-base md:text-lg font-bold text-white
-             bg-[#de5422]
+              className="group relative cursor-pointer px-5 md:px-8 py-3 md:py-4 
+             rounded-lg md:rounded-xl text-base md:text-lg font-bold text-white
+             bg-gradient-to-r from-[#de5422] to-[#ff6b35]
              transition-all duration-300 transform hover:scale-105
              flex items-center gap-2 w-full sm:w-auto justify-center
-             overflow-hidden shadow-2xl"
+             overflow-hidden shadow-2xl hover:shadow-3xl"
             >
               <span className="relative z-10">Shop Now</span>
               <ArrowRight className="w-4 h-4 md:w-5 md:h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
@@ -224,7 +225,7 @@ export default function HeroSlider() {
 
             <button
               onClick={() => router.push("/about")}
-              className="cursor-pointer px-5 md:px-6 py-2.5 md:py-3.5 rounded-xl text-base md:text-lg font-bold transition-all duration-300 transform hover:scale-105 w-full sm:w-auto shadow-xl backdrop-blur-sm"
+              className="cursor-pointer px-4 md:px-6 py-2.5 md:py-3.5 rounded-lg md:rounded-xl text-base md:text-lg font-bold transition-all duration-300 transform hover:scale-105 w-full sm:w-auto shadow-lg backdrop-blur-sm"
               style={{
                 background: "rgba(255, 255, 255, 0.15)",
                 border: "2px solid rgba(255, 255, 255, 0.6)",
@@ -370,7 +371,7 @@ export default function HeroSlider() {
       </AnimatePresence>
 
       {/* Bottom gradient for mobile */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/50 to-transparent z-10 md:hidden" />
+      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/40 to-transparent z-10 md:hidden" />
     </div>
   );
 }
