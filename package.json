@@ -1,0 +1,45 @@
+{
+  "name": "royalstore",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@tiptap/extension-image": "^3.4.2",
+    "@tiptap/extension-link": "^3.4.2",
+    "@tiptap/extension-underline": "^3.4.2",
+    "@tiptap/react": "^3.4.2",
+    "@tiptap/starter-kit": "^3.4.2",
+    "@uploadthing/react": "^7.3.3",
+    "axios": "^1.11.0",
+    "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.7.0",
+    "framer-motion": "^12.23.16",
+    "html-react-parser": "^5.2.6",
+    "jose": "^6.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.542.0",
+    "mongoose": "^8.18.0",
+    "next": "^16.1.0",
+    "next-auth": "^4.24.13",
+    "next-cloudinary": "^6.16.0",
+    "nodemailer": "^7.0.7",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-hot-toast": "^2.6.0",
+    "react-icons": "^5.5.0",
+    "resend": "^6.5.2",
+    "uploadthing": "^7.7.4"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "^16.1.0",
+    "tailwindcss": "^4"
+  }
+}
