@@ -276,15 +276,82 @@ export default function ProductPage() {
     }
   };
 
-  // ✅ Parse description
-  let descriptionHTML = "<p>No description available.</p>";
-  try {
-    if (product?.description) {
-      descriptionHTML = product.description;
+  // ✅ Parse description - Fixed version
+  const getDescriptionContent = () => {
+    if (!product?.description) {
+      return {
+        html: "<p class='text-gray-500 italic'>No description available yet.</p>",
+        isEmpty: true
+      };
     }
-  } catch (err) {
-    console.error("Description parse error:", err);
-  }
+
+    try {
+      // If description is a string, check if it's valid
+      if (typeof product.description === 'string') {
+        // Check if the string is empty or just whitespace
+        if (product.description.trim() === '') {
+          return {
+            html: "<p class='text-gray-500 italic'>No description available yet.</p>",
+            isEmpty: true
+          };
+        }
+        
+        // Check if it's a valid HTML string
+        if (product.description.includes('<') && product.description.includes('>')) {
+          return {
+            html: product.description,
+            isEmpty: false
+          };
+        }
+        
+        // If it's a plain text string, wrap it in a paragraph
+        return {
+          html: `<p>${product.description}</p>`,
+          isEmpty: false
+        };
+      }
+      
+      // If description is an object (like from draft.js or tiptap)
+      if (typeof product.description === 'object') {
+        // Check if it's an empty object
+        if (Object.keys(product.description).length === 0) {
+          return {
+            html: "<p class='text-gray-500 italic'>No description available yet.</p>",
+            isEmpty: true
+          };
+        }
+        
+        // Try to convert object to string for display
+        const objectStr = JSON.stringify(product.description);
+        if (objectStr === '{}' || objectStr === '[]') {
+          return {
+            html: "<p class='text-gray-500 italic'>No description available yet.</p>",
+            isEmpty: true
+          };
+        }
+        
+        // If it's a draft.js or tiptap object, show a message
+        return {
+          html: "<p class='text-gray-500 italic'>Description format not supported. Please check the admin panel.</p>",
+          isEmpty: true
+        };
+      }
+      
+      // Default fallback
+      return {
+        html: "<p class='text-gray-500 italic'>No description available yet.</p>",
+        isEmpty: true
+      };
+    } catch (err) {
+      console.error("Description parse error:", err);
+      return {
+        html: "<p class='text-gray-500 italic'>No description available yet.</p>",
+        isEmpty: true
+      };
+    }
+  };
+
+  const descriptionContent = getDescriptionContent();
 
   if (loading) return <ProductSkeleton />;
 
@@ -570,10 +637,24 @@ export default function ProductPage() {
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <div
-                    className="prose prose-gray max-w-none text-gray-700 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: descriptionHTML }}
-                  />
+                  {descriptionContent.isEmpty ? (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span className="text-2xl">📝</span>
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        No Description Available
+                      </h3>
+                      <p className="text-gray-600">
+                        Product description will be added soon.
+                      </p>
+                    </div>
+                  ) : (
+                    <div
+                      className="prose prose-gray max-w-none text-gray-700 leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: descriptionContent.html }}
+                    />
+                  )}
                 </motion.div>
               ) : (
                 <motion.div

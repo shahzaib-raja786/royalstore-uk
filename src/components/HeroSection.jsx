@@ -38,7 +38,7 @@ export default function HeroSlider() {
     setIsTransitioning(true);
     const timer = setTimeout(() => {
       setIsTransitioning(false);
-    }, 1200); // Match this with your animation duration
+    }, 1200);
 
     return () => clearTimeout(timer);
   }, [current]);
@@ -110,18 +110,15 @@ export default function HeroSlider() {
   }
 
   return (
-    <div className="relative w-full h-[90vh] sm:h-[400px] md:h-[550px] lg:h-[650px] xl:h-[610px] overflow-hidden group">
-      {/* Dual Layer Overlay - Always visible for text readability */}
+    <div className="relative w-full h-[85vh] sm:h-[90vh] md:h-[92vh] lg:h-[95vh] overflow-hidden group">
+      {/* Dual Layer Overlay - Optimized for text readability */}
       <div className="absolute inset-0 z-10">
-        {/* Solid semi-transparent overlay for text contrast */}
         <div
           className={`absolute inset-0 transition-all duration-500 ${
-            isTransitioning ? "bg-black/60" : "bg-black/30"
+            isTransitioning ? "bg-black/70" : "bg-black/40"
           }`}
         />
-
-        {/* Gradient overlay for visual depth */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
       </div>
 
       {/* Main Slider */}
@@ -146,170 +143,195 @@ export default function HeroSlider() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Text Overlay - Centered on all screens */}
-      <div className="absolute inset-0 flex items-center justify-center z-20 px-4">
-        <motion.div
-          className="text-center w-full max-w-5xl mx-auto"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.8 }}
-        >
-          {/* Tagline - Only show on desktop, hidden on mobile */}
+      {/* Centered Content Container */}
+      <div className="absolute inset-0 flex items-center justify-center z-20">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
-            className="inline-block mb-4 md:mb-6 px-4 py-2 rounded-full 
-             bg-gradient-to-br from-orange-600 to-amber-600 
-             shadow-xl backdrop-blur-md border border-white/20
-             hidden md:block"
-          >
-            <span className="text-white font-bold text-sm md:text-base tracking-wide">
-              {images[current].tagline || "Premium Collection"}
-            </span>
-          </motion.div>
-
-          {/* Title */}
-          <motion.h1
-            className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-3 md:mb-4 leading-tight px-2"
-            initial={{ opacity: 0, y: 15 }}
+            className="text-center w-full"
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.8 }}
-            style={{
-              color: "#ffffff",
-              textShadow: `
-                0 2px 4px rgba(0, 0, 0, 0.5),
-                0 4px 8px rgba(0, 0, 0, 0.4),
-                0 8px 16px rgba(0, 0, 0, 0.3)
-              `,
-            }}
+            transition={{ delay: 0.5, duration: 0.8 }}
           >
-            {images[current].title || "Discover Excellence"}
-          </motion.h1>
-
-          {/* Description - Hidden on mobile, shown on desktop */}
-          <motion.p
-            className="hidden md:block text-lg md:text-xl lg:text-2xl mb-6 md:mb-8 max-w-2xl mx-auto leading-relaxed font-medium px-2"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.9, duration: 0.8 }}
-            style={{
-              color: "#f8fafc",
-              textShadow: `
-                0 1px 2px rgba(0, 0, 0, 0.6),
-                0 2px 4px rgba(0, 0, 0, 0.5)
-              `,
-            }}
-          >
-            {images[current].description ||
-              "Experience the perfect blend of quality and elegance"}
-          </motion.p>
-
-          {/* Buttons */}
-          <motion.div
-            className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center mt-4 md:mt-0"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 1.1, duration: 0.5 }}
-          >
-            <button
-              onClick={() => router.push("/productlisting")}
-              className="group relative cursor-pointer px-5 md:px-8 py-3 md:py-4 
-             rounded-lg md:rounded-xl text-base md:text-lg font-bold text-white
-             bg-gradient-to-r from-[#de5422] to-[#ff6b35]
-             transition-all duration-300 transform hover:scale-105
-             flex items-center gap-2 w-full sm:w-auto justify-center
-             overflow-hidden shadow-2xl hover:shadow-3xl"
-            >
-              <span className="relative z-10">Shop Now</span>
-              <ArrowRight className="w-4 h-4 md:w-5 md:h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
-              <div className="absolute inset-0 bg-white/20 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500" />
-            </button>
-
-            <button
-              onClick={() => router.push("/about")}
-              className="cursor-pointer px-4 md:px-6 py-2.5 md:py-3.5 rounded-lg md:rounded-xl text-base md:text-lg font-bold transition-all duration-300 transform hover:scale-105 w-full sm:w-auto shadow-lg backdrop-blur-sm"
+            {/* Main Title - Reduced size on desktop, solid white */}
+            <motion.h1
+              className="text-4xl sm:text-5xl md:text-5xl lg:text-6xl xl:text-7xl font-black mb-4 md:mb-6 leading-tight"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7, duration: 0.8 }}
               style={{
-                background: "rgba(255, 255, 255, 0.15)",
-                border: "2px solid rgba(255, 255, 255, 0.6)",
                 color: "#ffffff",
-                textShadow: "0 1px 2px rgba(0, 0, 0, 0.5)",
-                boxShadow: "0 8px 25px rgba(0, 0, 0, 0.2)",
+                textShadow: `
+                  0 4px 8px rgba(0, 0, 0, 0.6),
+                  0 8px 16px rgba(0, 0, 0, 0.5),
+                  0 12px 24px rgba(0, 0, 0, 0.4)
+                `,
               }}
             >
-              Discover More
-            </button>
+              {images[current].title || "DISCOVER EXCELLENCE"}
+            </motion.h1>
+
+            {/* Subtitle - Bigger and bolder */}
+            <motion.h2
+              className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold mb-4 md:mb-8 max-w-5xl mx-auto leading-snug"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.9, duration: 0.8 }}
+              style={{
+                color: "#f0f0f0",
+                textShadow: `
+                  0 2px 4px rgba(0, 0, 0, 0.7),
+                  0 4px 8px rgba(0, 0, 0, 0.6)
+                `,
+              }}
+            >
+              {images[current].subtitle || "Where Quality Meets Innovation"}
+            </motion.h2>
+
+            {/* Description - Visible on all screens */}
+            <motion.p
+              className="text-base sm:text-lg md:text-xl lg:text-2xl mb-8 md:mb-12 max-w-3xl mx-auto font-medium px-2 sm:px-0"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.1, duration: 0.8 }}
+              style={{
+                color: "#e5e7eb",
+                textShadow: `
+                  0 2px 4px rgba(0, 0, 0, 0.7)
+                `,
+              }}
+            >
+              {images[current].description ||
+                "Experience unparalleled quality and innovation that transforms your expectations into reality"}
+            </motion.p>
+
+            {/* CTA Buttons - Centered and responsive */}
+            <motion.div
+              className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center items-center"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 1.3, duration: 0.5 }}
+            >
+              <button
+                onClick={() => router.push("/productlisting")}
+                className="group relative px-6 sm:px-8 md:px-10 py-3 md:py-4 
+               rounded-xl md:rounded-2xl text-lg md:text-xl font-bold text-white
+               bg-gradient-to-r from-[#de5422] via-[#ff6b35] to-[#ff8c42]
+               hover:from-[#ff6b35] hover:to-[#ff8c42]
+               transition-all duration-300 transform hover:scale-105
+               flex items-center gap-3 w-full sm:w-auto justify-center
+               shadow-2xl hover:shadow-3xl min-h-[56px]"
+              >
+                <span className="relative z-10">EXPLORE COLLECTION</span>
+                <motion.div
+                  animate={{
+                    x: [0, 3, 0],
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    repeatType: "reverse",
+                    ease: "easeInOut",
+                  }}
+                  className="relative z-10"
+                >
+                  <ArrowRight className="w-5 h-5 md:w-6 md:h-6" />
+                </motion.div>
+              </button>
+
+              <button
+                onClick={() => router.push("/about")}
+                className="px-6 sm:px-8 md:px-10 py-3 md:py-4 rounded-xl md:rounded-2xl text-lg md:text-xl font-bold 
+               transition-all duration-300 transform hover:scale-105 w-full sm:w-auto 
+               shadow-2xl backdrop-blur-md border-2 min-h-[56px]"
+                style={{
+                  background: "rgba(255, 255, 255, 0.12)",
+                  borderColor: "rgba(255, 255, 255, 0.4)",
+                  color: "#ffffff",
+                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.5)",
+                  boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+                }}
+              >
+                LEARN MORE
+              </button>
+            </motion.div>
           </motion.div>
-        </motion.div>
+        </div>
       </div>
 
-      {/* Navigation Arrows - Hidden on mobile, shown on hover for desktop */}
+      {/* Navigation Arrows - Visible on all screens */}
       <button
         onClick={prevSlide}
-        className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 text-white p-3 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 backdrop-blur-sm z-30 hidden md:block shadow-lg"
+        className="absolute left-2 sm:left-4 md:left-6 top-1/2 transform -translate-y-1/2 
+       text-white p-3 sm:p-4 rounded-full transition-all duration-300 
+       opacity-0 group-hover:opacity-100 backdrop-blur-md z-30 shadow-2xl"
         aria-label="Previous slide"
         style={{
-          background: "rgba(0, 0, 0, 0.5)",
-          border: "1px solid rgba(255, 255, 255, 0.2)",
+          background: "rgba(0, 0, 0, 0.6)",
+          border: "2px solid rgba(255, 255, 255, 0.3)",
         }}
       >
-        <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+        <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
       </button>
 
       <button
         onClick={nextSlide}
-        className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 text-white p-3 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 backdrop-blur-sm z-30 hidden md:block shadow-lg"
+        className="absolute right-2 sm:right-4 md:right-6 top-1/2 transform -translate-y-1/2 
+       text-white p-3 sm:p-4 rounded-full transition-all duration-300 
+       opacity-0 group-hover:opacity-100 backdrop-blur-md z-30 shadow-2xl"
         aria-label="Next slide"
         style={{
-          background: "rgba(0, 0, 0, 0.5)",
-          border: "1px solid rgba(255, 255, 255, 0.2)",
+          background: "rgba(0, 0, 0, 0.6)",
+          border: "2px solid rgba(255, 255, 255, 0.3)",
         }}
       >
-        <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+        <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
       </button>
 
-      {/* Controls Container - Only show on desktop */}
-      {!isMobile && (
-        <div
-          className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-4 backdrop-blur-sm rounded-full px-4 py-2 z-30 shadow-xl"
-          style={{
-            background: "rgba(0, 0, 0, 0.5)",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
-          }}
+      {/* Controls Container - Bottom Center */}
+      <div
+        className="absolute bottom-6 sm:bottom-8 left-1/2 transform -translate-x-1/2 
+       hidden md:flex items-center gap-4 backdrop-blur-md rounded-full 
+       px-4 py-2 sm:px-6 sm:py-3 z-30 shadow-2xl"
+        style={{
+          background: "rgba(0, 0, 0, 0.6)",
+          border: "1px solid rgba(255, 255, 255, 0.15)",
+        }}
+      >
+        {/* Play/Pause Button */}
+        <button
+          onClick={toggleAutoPlay}
+          className="text-white hover:text-amber-300 transition-colors duration-200 p-1"
+          aria-label={isAutoPlaying ? "Pause slideshow" : "Play slideshow"}
         >
-          {/* Play/Pause Button */}
-          <button
-            onClick={toggleAutoPlay}
-            className="text-white hover:text-amber-300 transition-colors duration-200 p-1"
-            aria-label={isAutoPlaying ? "Pause slideshow" : "Play slideshow"}
-          >
-            {isAutoPlaying ? (
-              <Pause className="w-4 h-4" />
-            ) : (
-              <Play className="w-4 h-4" />
-            )}
-          </button>
+          {isAutoPlaying ? (
+            <Pause className="w-4 h-4 sm:w-5 sm:h-5" />
+          ) : (
+            <Play className="w-4 h-4 sm:w-5 sm:h-5" />
+          )}
+        </button>
 
-          {/* Dots Navigation */}
-          <div className="flex gap-2">
-            {images.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => goToSlide(idx)}
-                className={`relative transition-all duration-300 ${
-                  idx === current ? "scale-125" : "scale-100 hover:scale-110"
+        {/* Dots Navigation */}
+        <div className="flex gap-2 sm:gap-3">
+          {images.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => goToSlide(idx)}
+              className={`relative transition-all duration-300 ${
+                idx === current ? "scale-125" : "scale-100 hover:scale-110"
+              }`}
+              aria-label={`Go to slide ${idx + 1}`}
+            >
+              <div
+                className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all shadow-lg ${
+                  idx === current
+                    ? "bg-amber-400"
+                    : "bg-white/90 hover:bg-white"
                 }`}
-                aria-label={`Go to slide ${idx + 1}`}
-              >
-                <div
-                  className={`w-2 h-2 rounded-full transition-all shadow-md ${
-                    idx === current
-                      ? "bg-amber-400"
-                      : "bg-white/80 hover:bg-white"
-                  }`}
-                />
-              </button>
-            ))}
-          </div>
+              />
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* Scroll Indicator - Only on mobile */}
       <AnimatePresence>
@@ -333,16 +355,16 @@ export default function HeroSlider() {
               className="flex flex-col items-center"
             >
               <div
-                className="w-8 h-14 rounded-full flex items-start justify-center p-1"
+                className="w-10 h-16 rounded-full flex items-start justify-center p-2"
                 style={{
                   border: "2px solid rgba(255, 255, 255, 0.8)",
-                  background: "rgba(0, 0, 0, 0.3)",
-                  backdropFilter: "blur(4px)",
+                  background: "rgba(0, 0, 0, 0.4)",
+                  backdropFilter: "blur(8px)",
                 }}
               >
                 <motion.div
                   animate={{
-                    y: [0, 24, 0],
+                    y: [0, 28, 0],
                   }}
                   transition={{
                     duration: 2,
@@ -350,28 +372,28 @@ export default function HeroSlider() {
                     repeatType: "loop",
                     ease: "easeInOut",
                   }}
-                  className="w-1.5 h-1.5 rounded-full"
+                  className="w-2 h-2 rounded-full"
                   style={{
                     background: "linear-gradient(to bottom, #ffffff, #f8fafc)",
                   }}
                 />
               </div>
               <span
-                className="text-xs font-bold mt-2 tracking-wider"
+                className="text-sm font-bold mt-3 tracking-wider"
                 style={{
                   color: "#ffffff",
-                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.7)",
+                  textShadow: "0 2px 8px rgba(0, 0, 0, 0.8)",
                 }}
               >
-                SWIPE UP
+                EXPLORE MORE
               </span>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Bottom gradient for mobile */}
-      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/40 to-transparent z-10 md:hidden" />
+      {/* Bottom gradient for better text contrast */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/70 via-black/20 to-transparent z-10" />
     </div>
   );
 }
