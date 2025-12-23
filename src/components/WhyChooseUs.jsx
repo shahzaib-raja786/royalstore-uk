@@ -40,25 +40,25 @@ export default function WhyChooseUs() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const containerRef = useRef(null);
   const autoScrollRef = useRef(null);
-  
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   // Auto-scroll effect
   useEffect(() => {
     if (!isMobile) return;
-    
+
     autoScrollRef.current = setInterval(() => {
-      setCurrentIndex(prev => (prev + 1) % points.length);
+      setCurrentIndex((prev) => (prev + 1) % points.length);
     }, 3500); // Change every 3.5 seconds
-    
+
     return () => {
       if (autoScrollRef.current) {
         clearInterval(autoScrollRef.current);
@@ -69,14 +69,14 @@ export default function WhyChooseUs() {
   // Scroll to current card
   useEffect(() => {
     if (!isMobile || !containerRef.current) return;
-    
+
     const container = containerRef.current;
     const cardWidth = 280; // matches w-[280px]
     const gap = 16; // gap-4 = 16px
-    
+
     container.scrollTo({
       left: currentIndex * (cardWidth + gap),
-      behavior: 'smooth'
+      behavior: "smooth",
     });
   }, [currentIndex, isMobile]);
 
@@ -86,7 +86,7 @@ export default function WhyChooseUs() {
     if (autoScrollRef.current) {
       clearInterval(autoScrollRef.current);
       autoScrollRef.current = setInterval(() => {
-        setCurrentIndex(prev => (prev + 1) % points.length);
+        setCurrentIndex((prev) => (prev + 1) % points.length);
       }, 3500);
     }
   };
@@ -114,16 +114,17 @@ export default function WhyChooseUs() {
           </span>
           <div className="w-6 h-1 bg-gradient-to-l from-[#de5422] to-[#ff6b00] rounded-full"></div>
         </div>
-        
+
         <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-3">
           <span className="text-gray-900">Why Choose</span>{" "}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#de5422] to-[#ff6b00]">
             Us?
           </span>
         </h2>
-        
+
         <p className="text-gray-600 text-sm sm:text-base md:text-lg max-w-2xl mx-auto px-2 leading-relaxed">
-          Experience the perfect blend of quality, craftsmanship, and innovation — tailored for you.
+          Experience the perfect blend of quality, craftsmanship, and innovation
+          — tailored for you.
         </p>
       </motion.div>
 
@@ -131,12 +132,12 @@ export default function WhyChooseUs() {
       <div className={`${isMobile ? "block" : "hidden"}`}>
         <div className="relative px-2">
           {/* Horizontal scroll container - Hidden scrollbar */}
-          <div 
+          <div
             ref={containerRef}
             className="flex overflow-x-hidden scroll-smooth gap-4 pb-4 px-4"
             style={{
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
             }}
           >
             {/* Hide scrollbar for Chrome, Safari and Opera */}
@@ -145,29 +146,31 @@ export default function WhyChooseUs() {
                 display: none;
               }
             `}</style>
-            
+
             {points.map((point, idx) => (
               <motion.div
                 key={idx}
                 initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
-                animate={{ 
+                animate={{
                   opacity: idx === currentIndex ? 1 : 0.9,
-                  scale: idx === currentIndex ? 1 : 0.98
+                  scale: idx === currentIndex ? 1 : 0.98,
                 }}
                 transition={{ duration: 0.3 }}
                 className="flex-shrink-0 w-[280px]"
               >
                 <div className="relative p-6 bg-white rounded-2xl shadow-lg border border-gray-100 flex flex-col items-center h-full">
                   {/* Icon container */}
-                  <div className={`relative mb-4 p-3 rounded-xl bg-gradient-to-r ${point.bgGradient}`}>
-                    <div className="text-[#de5422]">
-                      {point.icon}
-                    </div>
-                    
+                  <div
+                    className={`relative mb-4 p-3 rounded-xl bg-gradient-to-r ${point.bgGradient}`}
+                  >
+                    <div className="text-[#de5422]">{point.icon}</div>
+
                     {/* Icon background accent */}
                     <div className="absolute inset-0 rounded-xl">
-                      <div className={`absolute inset-0 bg-gradient-to-r ${point.gradient} opacity-20 rounded-xl`}></div>
+                      <div
+                        className={`absolute inset-0 bg-gradient-to-r ${point.gradient} opacity-20 rounded-xl`}
+                      ></div>
                     </div>
                   </div>
 
@@ -188,7 +191,7 @@ export default function WhyChooseUs() {
               </motion.div>
             ))}
           </div>
-          
+
           {/* Mobile dots indicator */}
           <div className="flex justify-center gap-3 mt-4">
             {points.map((_, idx) => (
@@ -196,9 +199,9 @@ export default function WhyChooseUs() {
                 key={idx}
                 onClick={() => handleDotClick(idx)}
                 className={`relative w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                  idx === currentIndex 
-                    ? 'bg-[#de5422] scale-125' 
-                    : 'bg-gray-300 hover:bg-gray-400'
+                  idx === currentIndex
+                    ? "bg-[#de5422] scale-125"
+                    : "bg-gray-300 hover:bg-gray-400"
                 }`}
                 aria-label={`Go to card ${idx + 1}`}
               >
@@ -207,14 +210,14 @@ export default function WhyChooseUs() {
                   <motion.div
                     className="absolute inset-0 border-2 border-[#de5422] rounded-full"
                     initial={{ scale: 1 }}
-                    animate={{ 
+                    animate={{
                       scale: [1, 1.5, 1],
-                      opacity: [1, 0, 1]
+                      opacity: [1, 0, 1],
                     }}
-                    transition={{ 
-                      duration: 3.5, 
+                    transition={{
+                      duration: 3.5,
                       repeat: Infinity,
-                      ease: "easeInOut"
+                      ease: "easeInOut",
                     }}
                   />
                 )}
@@ -225,7 +228,11 @@ export default function WhyChooseUs() {
       </div>
 
       {/* Desktop grid layout */}
-      <div className={`${isMobile ? "hidden" : "grid"} grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 max-w-7xl mx-auto relative z-10 px-2`}>
+      <div
+        className={`${
+          isMobile ? "hidden" : "grid"
+        } grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 max-w-7xl mx-auto relative z-10 px-2`}
+      >
         {points.map((point, idx) => (
           <motion.div
             key={idx}
@@ -247,20 +254,20 @@ export default function WhyChooseUs() {
             <div className="relative p-6 md:p-8 bg-white rounded-xl md:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col items-center border border-gray-100 group-hover:border-orange-200 h-full">
               {/* Hover shine effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 rounded-xl md:rounded-2xl"></div>
-              
+
               {/* Icon container */}
               <motion.div
                 whileHover={{ rotate: 5, scale: 1.1 }}
                 transition={{ type: "spring", stiffness: 300 }}
                 className={`relative mb-4 md:mb-6 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-r ${point.bgGradient} group-hover:shadow-md transition-shadow duration-300`}
               >
-                <div className="text-[#de5422]">
-                  {point.icon}
-                </div>
-                
+                <div className="text-[#de5422]">{point.icon}</div>
+
                 {/* Icon background accent */}
                 <div className="absolute inset-0 rounded-xl md:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className={`absolute inset-0 bg-gradient-to-r ${point.gradient} opacity-20 rounded-xl md:rounded-2xl`}></div>
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-r ${point.gradient} opacity-20 rounded-xl md:rounded-2xl`}
+                  ></div>
                 </div>
               </motion.div>
 
@@ -281,7 +288,9 @@ export default function WhyChooseUs() {
 
             {/* Card background glow on hover */}
             <div className="absolute inset-0 -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div className={`absolute inset-0 bg-gradient-to-r ${point.gradient} blur-xl rounded-xl md:rounded-2xl opacity-30`}></div>
+              <div
+                className={`absolute inset-0 bg-gradient-to-r ${point.gradient} blur-xl rounded-xl md:rounded-2xl opacity-30`}
+              ></div>
             </div>
           </motion.div>
         ))}

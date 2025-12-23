@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { ChevronRight, Check, ArrowLeft } from "lucide-react";
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState(null);
@@ -9,6 +10,7 @@ export default function CheckoutPage() {
   const [discount, setDiscount] = useState(0);
   const [discountPercentage, setDiscountPercentage] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -59,7 +61,6 @@ export default function CheckoutPage() {
           const settingsData = await settingsRes.json();
           if (settingsData.success && settingsData.paymentMethods) {
             setPaymentSettings(settingsData.paymentMethods);
-            // Set default selected method based on availability
             if (settingsData.paymentMethods.cod) {
               setSelectedPaymentMethod("cod");
             } else if (settingsData.paymentMethods.stripe) {
@@ -90,7 +91,6 @@ export default function CheckoutPage() {
       [name]: type === "checkbox" ? checked : value,
     }));
 
-    // Clear error when user starts typing
     if (formErrors[name]) {
       setFormErrors((prev) => ({
         ...prev,
@@ -99,8 +99,8 @@ export default function CheckoutPage() {
     }
   };
 
-  // Form validation
-  const validateForm = () => {
+  // Form validation for step 1
+  const validateStep1 = () => {
     const errors = {};
 
     if (!formData.firstName.trim()) errors.firstName = "First name is required";
@@ -159,13 +159,12 @@ export default function CheckoutPage() {
       });
 
       const data = await res.json();
-      console.log("Order creation response:", data);
-
       if (res.ok) {
         setDiscount(data.discountAmount || 0);
         setDiscountPercentage(data.discountPercentage || 0);
         setCouponMessage(
-          `🎉 Coupon applied! ${data.discountPercentage ? `${data.discountPercentage}% off` : ""
+          `🎉 Coupon applied! ${
+            data.discountPercentage ? `${data.discountPercentage}% off` : ""
           } Saved: £${data.discountAmount}`
         );
       } else {
@@ -185,8 +184,8 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      // Scroll to first error
+    if (!validateStep1()) {
+      setCurrentStep(1);
       const firstError = Object.keys(formErrors)[0];
       document.querySelector(`[name="${firstError}"]`)?.focus();
       return;
@@ -218,8 +217,6 @@ export default function CheckoutPage() {
           return;
         }
 
-        // In future: redirect to Stripe
-        // window.location.href = data.url;
         alert("Stripe session created (Mock): " + JSON.stringify(data));
         setIsLoading(false);
         return;
@@ -267,8 +264,6 @@ export default function CheckoutPage() {
         saveAddress: formData.saveAddress,
       };
 
-      console.log("Sending order data:", orderData); // Debug log
-
       const res = await fetch("/api/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -277,26 +272,18 @@ export default function CheckoutPage() {
       });
 
       const data = await res.json();
-      console.log("Order API response:", data); // Debug log
 
       if (res.ok) {
-        // Clear cart
         await fetch("/api/cart", {
           method: "DELETE",
           credentials: "include",
         });
 
-        // Check if we have an order ID
         const orderId = data.orderId || data.order?._id || data._id;
-        console.log("Extracted orderId:", orderId); // Debug log
 
         if (orderId) {
-          console.log("Order created successfully with ID:", orderId);
-
-          // Redirect to order confirmation
           Router.push(`/order-confirmation?orderId=${orderId}`);
         } else {
-          console.error("No order ID in response:", data);
           alert(
             "Order placed successfully but couldn't get order details. Please check your orders page."
           );
@@ -305,8 +292,8 @@ export default function CheckoutPage() {
       } else {
         alert(
           data.error ||
-          data.message ||
-          "Failed to place order. Please try again."
+            data.message ||
+            "Failed to place order. Please try again."
         );
       }
     } catch (err) {
@@ -325,404 +312,708 @@ export default function CheckoutPage() {
     setCouponMessage("");
   };
 
+  // Navigation functions
+  const handleNextStep = () => {
+    if (currentStep === 1) {
+      if (!validateStep1()) {
+        const firstError = Object.keys(formErrors)[0];
+        document.querySelector(`[name="${firstError}"]`)?.focus();
+        return;
+      }
+    }
+    if (currentStep < 3) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // Step indicator component
+  const StepIndicator = () => {
+    const steps = [
+      { number: 1, label: "Billing Details" },
+      { number: 2, label: "Order Summary" },
+      { number: 3, label: "Payment" },
+    ];
+
+    return (
+      <div className="mb-8 md:mb-12">
+
+        {/* Steps */}
+        <div className="flex justify-between md:justify-center md:gap-16 lg:gap-24">
+          {steps.map((step) => (
+            <div
+              key={step.number}
+              className="flex flex-col items-center cursor-pointer"
+              onClick={() => {
+                if (step.number === 1) {
+                  setCurrentStep(1);
+                } else if (step.number === 2 && currentStep > 1) {
+                  setCurrentStep(2);
+                } else if (step.number === 3 && currentStep > 2) {
+                  setCurrentStep(3);
+                }
+              }}
+            >
+              <div
+                className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center mb-2 transition-all duration-300 ${
+                  currentStep >= step.number
+                    ? "bg-gradient-to-r from-[#de5422] to-orange-500 text-white"
+                    : "bg-gray-200 text-gray-400"
+                }`}
+              >
+                {currentStep > step.number ? (
+                  <Check className="w-6 h-6 md:w-7 md:h-7" />
+                ) : (
+                  <span className="text-lg md:text-xl font-bold">
+                    {step.number}
+                  </span>
+                )}
+              </div>
+              <span
+                className={`text-sm md:text-base font-medium ${
+                  currentStep >= step.number
+                    ? "text-[#de5422]"
+                    : "text-gray-400"
+                }`}
+              >
+                {step.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="min-h-screen  py-8">
-      <div className="container mx-auto px-4 max-w-7xl">
-        {/* Header  */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-[#de5422] mb-2">
-            <span className="text-gray-900">Check</span>out
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-6 md:py-8">
+      <div className="container mx-auto px-4 max-w-6xl">
+        {/* Header */}
+        <div className="text-center mb-6 md:mb-8">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-2">
+            <span className="text-gray-800">Secure</span>
+            <span className="text-[#de5422]"> Checkout</span>
           </h1>
-          <p className="text-gray-900">Complete your purchase securely</p>
+          <p className="text-gray-600 text-sm md:text-base">
+            Complete your purchase in 3 easy steps
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Billing Form (LEFT) */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-[#de5422]">
-              <div className="bg-gradient-to-r from-orange-400 to-amber-600 p-6">
-                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                  <span className="bg-white/20 p-2 rounded-lg">📝</span>
-                  Billing Details
-                </h2>
-              </div>
+        {/* Step Indicator */}
+        <StepIndicator />
 
-              <form className="p-6 space-y-6" onSubmit={handlePlaceOrder}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">
-                      First Name *
-                    </label>
-                    <input
-                      type="text"
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      placeholder="John"
-                      className={`w-full border rounded-xl p-3 focus:ring-2 focus:ring-[#de5422] focus:border-transparent outline-none transition duration-300 ${formErrors.firstName
-                        ? "border-red-500"
-                        : "border-[#de5422]"
-                        }`}
-                      required
-                    />
-                    {formErrors.firstName && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {formErrors.firstName}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">
-                      Last Name *
-                    </label>
-                    <input
-                      type="text"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      placeholder="Doe"
-                      className={`w-full border rounded-xl p-3 focus:ring-2 focus:ring-[#de5422] focus:border-transparent outline-none transition duration-300 ${formErrors.lastName
-                        ? "border-red-500"
-                        : "border-[#de5422]"
-                        }`}
-                      required
-                    />
-                    {formErrors.lastName && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {formErrors.lastName}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Street Address *
-                  </label>
-                  <input
-                    type="text"
-                    name="streetAddress"
-                    value={formData.streetAddress}
-                    onChange={handleInputChange}
-                    placeholder="123 Main Street"
-                    className={`w-full border rounded-xl p-3 focus:ring-2 focus:ring-[#de5422] focus:border-transparent outline-none transition duration-300 ${formErrors.streetAddress
-                      ? "border-red-500"
-                      : "border-[#de5422]"
-                      }`}
-                    required
-                  />
-                  {formErrors.streetAddress && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {formErrors.streetAddress}
-                    </p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">
-                      Town / City *
-                    </label>
-                    <input
-                      type="text"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      placeholder="London"
-                      className={`w-full border rounded-xl p-3 focus:ring-2 focus:ring-[#de5422] focus:border-transparent outline-none transition duration-300 ${formErrors.city ? "border-red-500" : "border-[#de5422]"
-                        }`}
-                      required
-                    />
-                    {formErrors.city && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {formErrors.city}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">
-                      Postcode *
-                    </label>
-                    <input
-                      type="text"
-                      name="postalCode"
-                      value={formData.postalCode}
-                      onChange={handleInputChange}
-                      placeholder="SW1A 1AA"
-                      className={`w-full border rounded-xl p-3 focus:ring-2 focus:ring-[#de5422] focus:border-transparent outline-none transition duration-300 ${formErrors.postalCode
-                        ? "border-red-500"
-                        : "border-[#de5422]"
-                        }`}
-                      required
-                    />
-                    {formErrors.postalCode && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {formErrors.postalCode}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">
-                      Phone Number *
-                    </label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="+44 20 7946 0958"
-                      className={`w-full border rounded-xl p-3 focus:ring-2 focus:ring-[#de5422] focus:border-transparent outline-none transition duration-300 ${formErrors.phone ? "border-red-500" : "border-[#de5422]"
-                        }`}
-                      required
-                    />
-                    {formErrors.phone && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {formErrors.phone}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">
-                      Email Address *
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      placeholder="john@example.com"
-                      className={`w-full border rounded-xl p-3 focus:ring-2 focus:ring-[#de5422] focus:border-transparent outline-none transition duration-300 ${formErrors.email ? "border-red-500" : "border-[#de5422]"
-                        }`}
-                      required
-                    />
-                    {formErrors.email && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {formErrors.email}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Order Notes (optional)
-                  </label>
-                  <textarea
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleInputChange}
-                    placeholder="Special delivery instructions or notes about your order..."
-                    className="w-full border border-[#de5422] rounded-xl p-3 focus:ring-2 focus:ring-[#de5422] focus:border-transparent outline-none transition duration-300 h-24"
-                  ></textarea>
-                </div>
-
-                <div className="flex items-start space-x-3 p-4 bg-amber-50 rounded-xl">
-                  <input
-                    type="checkbox"
-                    name="saveAddress"
-                    checked={formData.saveAddress}
-                    onChange={handleInputChange}
-                    className="mt-1 w-5 h-5 text-[#de5422] border-amber-300 rounded focus:ring-[#de5422]"
-                  />
-                  <span className="text-gray-900">
-                    Save this address for future orders
-                  </span>
-                </div>
-
-                <div className="flex items-start space-x-3 p-4 bg-amber-50 rounded-xl">
-                  <input
-                    type="checkbox"
-                    required
-                    className="mt-1 w-5 h-5 text-[#de5422] border-amber-300 rounded focus:ring-[#de5422]"
-                  />
-                  <span className="text-gray-900">
-                    I have read and agree to the Terms & Conditions
-                  </span>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading || !cart?.items?.length}
-                  className="w-full cursor-pointer bg-gradient-to-r from-orange-400 to-amber-600 hover:from-amber-400 hover:to-orange-600 text-white font-bold py-4 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                >
-                  {isLoading ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Processing Order...
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Steps Content */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+              {/* CASE 1: Billing Details */}
+              {currentStep === 1 && (
+                <div className="p-6 md:p-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#de5422] to-orange-500 flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">1</span>
                     </div>
-                  ) : (
-                    `Place Order - £${total.toFixed(2)}`
-                  )}
-                </button>
-              </form>
-            </div>
-          </div>
+                    <div>
+                      <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+                        Billing Details
+                      </h2>
+                      <p className="text-gray-600">
+                        Please fill in your delivery information
+                      </p>
+                    </div>
+                  </div>
 
-          {/* Order Summary (RIGHT) */}
-          <div className="space-y-6">
-            {/* Order Items */}
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-[#de5422]/30">
-              <div className="bg-gradient-to-r from-orange-400 to-amber-600 p-6">
-                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                  <span className="bg-white/20 p-2 rounded-lg">📦</span>
-                  Order Summary
-                  {cart?.items?.length > 0 && (
-                    <span className="bg-white/30 px-2 py-1 rounded-full text-sm ml-auto">
-                      {cart.items.length} item
-                      {cart.items.length !== 1 ? "s" : ""}
-                    </span>
-                  )}
-                </h2>
-              </div>
+                  <form className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          First Name *
+                        </label>
+                        <input
+                          type="text"
+                          name="firstName"
+                          value={formData.firstName}
+                          onChange={handleInputChange}
+                          placeholder="John"
+                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${
+                            formErrors.firstName
+                              ? "border-red-500"
+                              : "border-gray-200"
+                          }`}
+                          required
+                        />
+                        {formErrors.firstName && (
+                          <p className="text-red-500 text-sm mt-1">
+                            {formErrors.firstName}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Last Name *
+                        </label>
+                        <input
+                          type="text"
+                          name="lastName"
+                          value={formData.lastName}
+                          onChange={handleInputChange}
+                          placeholder="Doe"
+                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${
+                            formErrors.lastName
+                              ? "border-red-500"
+                              : "border-gray-200"
+                          }`}
+                          required
+                        />
+                        {formErrors.lastName && (
+                          <p className="text-red-500 text-sm mt-1">
+                            {formErrors.lastName}
+                          </p>
+                        )}
+                      </div>
+                    </div>
 
-              <div className="p-6">
-                <div className="space-y-4 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-[#de5422]/70 scrollbar-track-transparent">
-                  {cart?.items?.length > 0 ? (
-                    cart.items.map((item) => {
-                      const product = item.product || {};
-                      const customizations =
-                        item.selectedCustomizations?.flatMap(
-                          (group) => group.selectedCustomizations || []
-                        );
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Street Address *
+                      </label>
+                      <input
+                        type="text"
+                        name="streetAddress"
+                        value={formData.streetAddress}
+                        onChange={handleInputChange}
+                        placeholder="123 Main Street"
+                        className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${
+                          formErrors.streetAddress
+                            ? "border-red-500"
+                            : "border-gray-200"
+                        }`}
+                        required
+                      />
+                      {formErrors.streetAddress && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {formErrors.streetAddress}
+                        </p>
+                      )}
+                    </div>
 
-                      return (
-                        <div
-                          key={item._id}
-                          className="flex items-center justify-between p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-[#de5422]/20 hover:shadow-md hover:border-[#de5422]/50 transition-all duration-300"
-                        >
-                          <div className="flex items-center space-x-4">
-                            <div className="relative w-20 h-20 flex-shrink-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Town / City *
+                        </label>
+                        <input
+                          type="text"
+                          name="city"
+                          value={formData.city}
+                          onChange={handleInputChange}
+                          placeholder="London"
+                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${
+                            formErrors.city ? "border-red-500" : "border-gray-200"
+                          }`}
+                          required
+                        />
+                        {formErrors.city && (
+                          <p className="text-red-500 text-sm mt-1">
+                            {formErrors.city}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Postcode *
+                        </label>
+                        <input
+                          type="text"
+                          name="postalCode"
+                          value={formData.postalCode}
+                          onChange={handleInputChange}
+                          placeholder="SW1A 1AA"
+                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${
+                            formErrors.postalCode
+                              ? "border-red-500"
+                              : "border-gray-200"
+                          }`}
+                          required
+                        />
+                        {formErrors.postalCode && (
+                          <p className="text-red-500 text-sm mt-1">
+                            {formErrors.postalCode}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Phone Number *
+                        </label>
+                        <input
+                          type="tel"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          placeholder="+44 20 7946 0958"
+                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${
+                            formErrors.phone ? "border-red-500" : "border-gray-200"
+                          }`}
+                          required
+                        />
+                        {formErrors.phone && (
+                          <p className="text-red-500 text-sm mt-1">
+                            {formErrors.phone}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Email Address *
+                        </label>
+                        <input
+                          type="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          placeholder="john@example.com"
+                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${
+                            formErrors.email ? "border-red-500" : "border-gray-200"
+                          }`}
+                          required
+                        />
+                        {formErrors.email && (
+                          <p className="text-red-500 text-sm mt-1">
+                            {formErrors.email}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Order Notes (optional)
+                      </label>
+                      <textarea
+                        name="notes"
+                        value={formData.notes}
+                        onChange={handleInputChange}
+                        placeholder="Special delivery instructions or notes about your order..."
+                        className="w-full border-2 border-gray-200 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 h-32"
+                      ></textarea>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-4 bg-orange-50 rounded-xl border border-orange-100">
+                      <input
+                        type="checkbox"
+                        name="saveAddress"
+                        checked={formData.saveAddress}
+                        onChange={handleInputChange}
+                        className="mt-1 w-5 h-5 text-[#de5422] border-orange-300 rounded focus:ring-[#de5422]"
+                      />
+                      <span className="text-gray-700 text-sm">
+                        Save this address for future orders
+                      </span>
+                    </div>
+                  </form>
+
+                  {/* Desktop Next Button */}
+                  <div className="hidden md:flex justify-end mt-8">
+                    <button
+                      onClick={handleNextStep}
+                      className="bg-gradient-to-r from-[#de5422] to-orange-500 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all duration-300"
+                    >
+                      Continue to Order Summary
+                      <ChevronRight className="inline ml-2 w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* CASE 2: Order Summary */}
+              {currentStep === 2 && (
+                <div className="p-6 md:p-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#de5422] to-orange-500 flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">2</span>
+                    </div>
+                    <div>
+                      <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+                        Order Summary
+                      </h2>
+                      <p className="text-gray-600">
+                        Review your items and apply discounts
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Order Items */}
+                  
+                  <div className="space-y-4 max-h-96 overflow-y-auto pr-2 mb-6 scrollbar-thin scrollbar-thumb-[#de5422]/40 scrollbar-track-gray-100">
+                    {cart?.items?.length > 0 ? (
+                      cart.items.map((item) => {
+                        const product = item.product || {};
+                        const customizations =
+                          item.selectedCustomizations?.flatMap(
+                            (group) => group.selectedCustomizations || []
+                          );
+
+                        return (
+                          <div
+                            key={item._id}
+                            className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200 hover:border-[#de5422]/30 transition-all duration-300"
+                          >
+                            <div className="relative w-16 h-16 flex-shrink-0">
                               <Image
                                 src={product.thumbnail || "/fallback.png"}
                                 alt={product.name || "Product"}
                                 fill
-                                className="object-cover rounded-lg shadow-md border border-[#de5422]/30"
+                                className="object-cover rounded-lg border-2 border-white"
                               />
-                              <div className="absolute -top-1 -right-1 bg-[#de5422] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                              <div className="absolute -top-2 -right-2 bg-[#de5422] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
                                 {item.quantity}
                               </div>
                             </div>
 
-                            <div className="flex-1">
-                              <p className="font-semibold text-gray-900 text-lg leading-tight">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-gray-800 truncate">
                                 {product.name}
                               </p>
-
                               {customizations?.length > 0 && (
-                                <div className="mt-2 space-y-1">
+                                <div className="flex flex-wrap gap-1 mt-1">
                                   {customizations.map((c, index) => (
                                     <span
                                       key={index}
-                                      className="inline-block bg-white px-2 py-1 rounded-md text-xs text-[#de5422] border border-[#de5422]/30 mr-2 hover:bg-gradient-to-br hover:from-amber-400 hover:to-orange-600 hover:text-white transition-all duration-300"
+                                      className="inline-block bg-white px-2 py-1 rounded-md text-xs text-[#de5422] border border-[#de5422]/30"
                                     >
                                       {c.type}: {c.option}
-                                      {c.extraPrice > 0 &&
-                                        ` (+£${c.extraPrice})`}
                                     </span>
                                   ))}
                                 </div>
                               )}
-
                               <p className="text-sm text-gray-600 mt-1">
                                 £{item.totalPrice?.toFixed(2)} each
                               </p>
                             </div>
+
+                            <span className="font-bold text-[#de5422] text-lg whitespace-nowrap">
+                              £{(item.totalPrice * item.quantity).toFixed(2)}
+                            </span>
                           </div>
-
-                          <span className="font-bold text-[#de5422] text-lg min-w-[80px] text-right">
-                            £{(item.totalPrice * item.quantity).toFixed(2)}
-                          </span>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      Your cart is empty
-                    </div>
-                  )}
-                </div>
-
-                {/* Enhanced Coupon Section */}
-                <div className="mt-6 p-5 bg-gradient-to-r from-orange-50 to-amber-100 rounded-2xl border border-[#de5422]/30 shadow-sm">
-                  <h3 className="font-semibold text-[#de5422] mb-3 flex items-center gap-2 text-lg">
-                    <span>🎫</span>
-                    Apply Coupon
-                    {discount > 0 && (
-                      <button
-                        onClick={handleRemoveCoupon}
-                        className="ml-auto text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors"
-                      >
-                        Remove
-                      </button>
+                        );
+                      })
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        Your cart is empty
+                      </div>
                     )}
-                  </h3>
+                  </div>
 
-                  {couponMessage && (
-                    <div
-                      className={`mb-3 p-3 rounded-lg text-sm ${couponMessage.includes("applied")
-                        ? "bg-green-100 text-green-700 border border-green-300"
-                        : "bg-red-100 text-red-700 border border-red-300"
-                        }`}
-                    >
-                      {couponMessage}
+                  {/* Coupon Section */}
+                  <div className="mb-6">
+                    <div className="p-5 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-[#de5422]/30">
+                      <h3 className="font-semibold text-gray-800 mb-3 text-lg">
+                        🎫 Apply Coupon Code
+                      </h3>
+
+                      {couponMessage && (
+                        <div
+                          className={`mb-3 p-3 rounded-lg text-sm font-medium ${
+                            couponMessage.includes("applied")
+                              ? "bg-green-100 text-green-700 border border-green-300"
+                              : "bg-red-100 text-red-700 border border-red-300"
+                          }`}
+                        >
+                          {couponMessage}
+                        </div>
+                      )}
+
+                      <form
+                        onSubmit={handleApplyCoupon}
+                        className="flex flex-col sm:flex-row gap-3"
+                      >
+                        <input
+                          type="text"
+                          value={coupon}
+                          onChange={(e) => setCoupon(e.target.value)}
+                          placeholder="Enter coupon code"
+                          disabled={couponLoading}
+                          className="flex-1 border-2 border-gray-200 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300"
+                        />
+                        <button
+                          type="submit"
+                          disabled={couponLoading || !coupon.trim()}
+                          className="bg-[#de5422] hover:bg-orange-600 text-white px-6 py-4 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {couponLoading ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Applying...
+                            </div>
+                          ) : (
+                            "Apply Coupon"
+                          )}
+                        </button>
+                      </form>
+
+                      {discount > 0 && (
+                        <div className="mt-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-300">
+                          <div className="flex justify-between items-center">
+                            <span className="font-semibold text-green-700">
+                              🎉 Coupon Applied!
+                            </span>
+                            <button
+                              onClick={handleRemoveCoupon}
+                              className="text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition-colors"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
 
-                  <form
-                    onSubmit={handleApplyCoupon}
-                    className="flex flex-col sm:flex-row gap-3"
-                  >
-                    <input
-                      type="text"
-                      value={coupon}
-                      onChange={(e) => setCoupon(e.target.value)}
-                      placeholder="Enter coupon code"
-                      disabled={couponLoading}
-                      className="flex-1 border border-[#de5422]/40 rounded-xl p-3 text-gray-700 focus:ring-2 focus:ring-[#de5422] focus:border-transparent outline-none transition duration-300 placeholder:text-gray-400 disabled:opacity-50"
-                    />
+                  {/* Desktop Navigation Buttons */}
+                  <div className="hidden md:flex justify-between mt-8 pt-6 border-t border-gray-200">
                     <button
-                      type="submit"
-                      disabled={couponLoading || !coupon.trim()}
-                      className="bg-[#de5422] hover:bg-gradient-to-br hover:from-amber-400 hover:to-orange-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-md hover:shadow-lg whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handlePrevStep}
+                      className="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-gray-300 text-gray-700 hover:bg-gray-50 transition-all duration-300"
                     >
-                      {couponLoading ? (
+                      <ArrowLeft className="w-4 h-4" />
+                      Back to Billing
+                    </button>
+                    <button
+                      onClick={handleNextStep}
+                      className="bg-gradient-to-r from-[#de5422] to-orange-500 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all duration-300"
+                    >
+                      Continue to Payment
+                      <ChevronRight className="inline ml-2 w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* CASE 3: Payment Method */}
+              {currentStep === 3 && (
+                <div className="p-6 md:p-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#de5422] to-orange-500 flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">3</span>
+                    </div>
+                    <div>
+                      <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+                        Payment Method
+                      </h2>
+                      <p className="text-gray-600">
+                        Choose how you'd like to pay
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Payment Options */}
+                  <div className="space-y-4 mb-8">
+                    {/* Cash on Delivery */}
+                    {paymentSettings.cod && (
+                      <div
+                        className={`p-5 rounded-xl border-2 transition-all duration-300 cursor-pointer ${
+                          selectedPaymentMethod === "cod"
+                            ? "bg-gradient-to-r from-orange-50 to-amber-50 border-[#de5422] ring-2 ring-[#de5422]/30"
+                            : "bg-white border-gray-200 hover:border-[#de5422]/50"
+                        }`}
+                        onClick={() => setSelectedPaymentMethod("cod")}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div
+                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 ${
+                              selectedPaymentMethod === "cod"
+                                ? "border-[#de5422] bg-[#de5422]"
+                                : "border-gray-300"
+                            }`}
+                          >
+                            {selectedPaymentMethod === "cod" && (
+                              <div className="w-2 h-2 rounded-full bg-white"></div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <span className="font-bold text-gray-900 block mb-1">
+                              Cash on Delivery
+                            </span>
+                            <p className="text-gray-600 text-sm">
+                              Pay securely by cash or bank transfer when you receive your order
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Stripe */}
+                    {paymentSettings.stripe && (
+                      <div
+                        className={`p-5 rounded-xl border-2 transition-all duration-300 cursor-pointer ${
+                          selectedPaymentMethod === "stripe"
+                            ? "bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-500 ring-2 ring-purple-500/30"
+                            : "bg-white border-gray-200 hover:border-purple-500/50"
+                        }`}
+                        onClick={() => setSelectedPaymentMethod("stripe")}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div
+                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 ${
+                              selectedPaymentMethod === "stripe"
+                                ? "border-purple-500 bg-purple-500"
+                                : "border-gray-300"
+                            }`}
+                          >
+                            {selectedPaymentMethod === "stripe" && (
+                              <div className="w-2 h-2 rounded-full bg-white"></div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <span className="font-bold text-gray-900 block mb-1">
+                              Credit/Debit Card (Stripe)
+                            </span>
+                            <p className="text-gray-600 text-sm">
+                              Pay securely using your credit or debit card
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {!paymentSettings.cod && !paymentSettings.stripe && (
+                      <div className="p-4 bg-red-50 text-red-600 rounded-xl text-center border border-red-200">
+                        No payment methods available. Please contact support.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Security Badge */}
+                  <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border-2 border-green-200 mb-8">
+                    <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                      <span className="text-2xl">🔒</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-800">Secure Checkout</p>
+                      <p className="text-sm text-gray-600">
+                        Your payment information is encrypted and secure
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Terms Checkbox */}
+                  <div className="flex items-start gap-3 p-4 bg-orange-50 rounded-xl border border-orange-100 mb-8">
+                    <input
+                      type="checkbox"
+                      required
+                      className="mt-1 w-5 h-5 text-[#de5422] border-orange-300 rounded focus:ring-[#de5422]"
+                    />
+                    <span className="text-gray-700 text-sm">
+                      I have read and agree to the Terms & Conditions and Privacy Policy
+                    </span>
+                  </div>
+
+                  {/* Desktop Navigation and Place Order */}
+                  <div className="hidden md:flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+                    <button
+                      onClick={handlePrevStep}
+                      className="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-gray-300 text-gray-700 hover:bg-gray-50 transition-all duration-300"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Back to Order Summary
+                    </button>
+                    
+                    <button
+                      onClick={handlePlaceOrder}
+                      disabled={isLoading || !cart?.items?.length}
+                      className="bg-gradient-to-r from-[#de5422] to-orange-500 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? (
                         <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          Applying...
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Processing Order...
                         </div>
                       ) : (
-                        "Apply Coupon"
+                        <>
+                          Place Order - £{total.toFixed(2)}
+                          <ChevronRight className="inline ml-2 w-5 h-5" />
+                        </>
                       )}
                     </button>
-                  </form>
+                  </div>
                 </div>
+              )}
+            </div>
 
-                {/* Enhanced Totals */}
-                <div className="mt-6 space-y-3 p-5 bg-white rounded-2xl shadow-md border border-[#de5422]/20">
-                  <div className="flex justify-between text-gray-700">
+            {/* Mobile Bottom Navigation - Only for steps 1 and 2 */}
+            {currentStep !== 3 && (
+              <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg">
+                <div className="flex justify-between items-center">
+                  <button
+                    onClick={handlePrevStep}
+                    disabled={currentStep === 1}
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg ${
+                      currentStep === 1
+                        ? "text-gray-400 cursor-not-allowed"
+                        : "text-[#de5422] hover:bg-orange-50"
+                    }`}
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Previous
+                  </button>
+                  <button
+                    onClick={handleNextStep}
+                    className="bg-gradient-to-r from-[#de5422] to-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-md transition-all duration-300"
+                  >
+                    Continue
+                    <ChevronRight className="inline ml-2 w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column - Order Summary Panel */}
+          <div
+  className={`lg:col-span-1 ${
+    currentStep === 1 ? "hidden lg:block" : ""
+  }`}
+>
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 sticky top-6">
+              <div className="bg-gradient-to-r from-[#de5422] to-orange-500 p-6">
+                <h3 className="text-xl font-bold text-white">
+                  Order Total
+                </h3>
+                <p className="text-white/90 text-sm">
+                  {cart?.items?.length || 0} item{cart?.items?.length !== 1 ? "s" : ""} in cart
+                </p>
+              </div>
+
+              <div className="p-6">
+                {/* Order Summary */}
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between text-gray-600">
                     <span>Subtotal</span>
-                    <span className="font-semibold">
-                      £{subtotal.toFixed(2)}
-                    </span>
+                    <span className="font-semibold">£{subtotal.toFixed(2)}</span>
                   </div>
 
                   {discount > 0 && (
                     <div className="flex justify-between text-green-600">
                       <span>
-                        Discount{" "}
-                        {discountPercentage > 0 && `(${discountPercentage}%)`}
+                        Discount {discountPercentage > 0 && `(${discountPercentage}%)`}
                       </span>
-                      <span className="font-semibold">
-                        -£{discount.toFixed(2)}
-                      </span>
+                      <span className="font-semibold">-£{discount.toFixed(2)}</span>
                     </div>
                   )}
 
-                  <div className="border-t border-[#de5422]/30 pt-3">
-                    <div className="flex justify-between text-lg font-bold text-[#de5422]">
+                  <div className="border-t border-gray-200 pt-3">
+                    <div className="flex justify-between text-xl font-bold text-[#de5422]">
                       <span>Total</span>
                       <span>£{total.toFixed(2)}</span>
                     </div>
@@ -733,128 +1024,74 @@ export default function CheckoutPage() {
                     )}
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Payment Method */}
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-[#de5422]/30">
-              <div className="bg-gradient-to-r from-orange-400 to-amber-600 p-6">
-                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                  <span className="bg-white/20 p-2 rounded-lg">💳</span>
-                  Payment Method
-                </h2>
-              </div>
+                {/* Current Step Info */}
+                <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                  <h4 className="font-semibold text-gray-800 mb-2">Current Step</h4>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-[#de5422] text-white flex items-center justify-center font-bold">
+                      {currentStep}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-700">
+                        {currentStep === 1 && "Billing Details"}
+                        {currentStep === 2 && "Order Summary"}
+                        {currentStep === 3 && "Payment Method"}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Step {currentStep} of 3
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
-              <div className="p-6 space-y-4">
-                {/* Cash on Delivery Option */}
-                {paymentSettings.cod && (
-                  <div className={`bg-gradient-to-r from-orange-50 to-amber-100 border-2 rounded-xl p-4 transition-all duration-300 hover:shadow-md ${selectedPaymentMethod === "cod" ? "border-[#de5422]/60 ring-1 ring-[#de5422]" : "border-transparent"}`}>
-                    <label className="flex items-start space-x-3 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="payment"
-                        value="cod"
-                        checked={selectedPaymentMethod === "cod"}
-                        onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                        className="mt-1 w-5 h-5 text-[#de5422] border-[#de5422]/40 focus:ring-[#de5422]"
-                      />
-                      <div>
-                        <span className="font-semibold text-[#de5422]">
-                          Pay When You Receive (Cash on Delivery)
-                        </span>
-                        <p className="text-sm text-gray-700 mt-2 leading-relaxed">
-                          Pay securely by cash or bank transfer at the time of
-                          delivery — no advance payment needed.
-                        </p>
-                      </div>
-                    </label>
+                {/* Mobile Place Order Button - Only for step 3 */}
+                {currentStep === 3 && (
+                  <div className="md:hidden">
+                    <button
+                      onClick={handlePlaceOrder}
+                      disabled={isLoading || !cart?.items?.length}
+                      className="w-full bg-gradient-to-r from-[#de5422] to-orange-500 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Processing...
+                        </div>
+                      ) : (
+                        `Place Order - £${total.toFixed(2)}`
+                      )}
+                    </button>
+                    
+                    <button
+                      onClick={handlePrevStep}
+                      className="w-full mt-3 text-[#de5422] hover:text-orange-600 text-center py-3 font-medium"
+                    >
+                      ← Back to Order Summary
+                    </button>
                   </div>
                 )}
 
-                {/* Stripe Option */}
-                {paymentSettings.stripe && (
-                  <div className={`bg-white border-2 rounded-xl p-4 transition-all duration-300 hover:shadow-md ${selectedPaymentMethod === "stripe" ? "border-purple-500/60 ring-1 ring-purple-500 bg-purple-50" : "border-gray-200"}`}>
-                    <label className="flex items-start space-x-3 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="payment"
-                        value="stripe"
-                        checked={selectedPaymentMethod === "stripe"}
-                        onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                        className="mt-1 w-5 h-5 text-purple-600 border-purple-300 focus:ring-purple-500"
-                      />
-                      <div>
-                        <span className="font-semibold text-gray-900 flex items-center gap-2">
-                          Pay with Card (Stripe)
-                          <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Secure</span>
-                        </span>
-                        <p className="text-sm text-gray-600 mt-2 leading-relaxed">
-                          Pay securely using your credit or debit card.
-                        </p>
-                      </div>
-                    </label>
+                {/* Need Help Section */}
+                <div className="border-t border-gray-200 pt-6">
+                  <h4 className="font-semibold text-gray-800 mb-2">Need Help?</h4>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Contact our support team for assistance
+                  </p>
+                  <div className="text-sm text-[#de5422] hover:text-orange-600 font-medium">
+                    support@example.com
                   </div>
-                )}
-
-                {!paymentSettings.cod && !paymentSettings.stripe && (
-                  <div className="p-4 bg-red-50 text-red-600 rounded-xl text-center">
-                    No payment methods available. Please contact support.
-                  </div>
-                )}
-
-                <div className="flex items-center justify-center gap-2 text-[#de5422]/90 mt-4">
-                  <span className="text-2xl">🔒</span>
-                  <span className="font-medium">
-                    Secure & Encrypted Checkout
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Trust Badges */}
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-[#de5422]/30 p-6">
-              <div className="grid grid-cols-2 gap-4 text-center">
-                <div className="flex flex-col items-center">
-                  <span className="text-2xl mb-2">🚚</span>
-                  <span className="text-sm font-medium text-[#de5422]">
-                    Free Shipping
-                  </span>
-                  <span className="text-xs text-gray-600">
-                    On orders over £50
-                  </span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <span className="text-2xl mb-2">↩️</span>
-                  <span className="text-sm font-medium text-[#de5422]">
-                    Easy Returns
-                  </span>
-                  <span className="text-xs text-gray-600">
-                    30-day guarantee
-                  </span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <span className="text-2xl mb-2">🔒</span>
-                  <span className="text-sm font-medium text-[#de5422]">
-                    Secure Payment
-                  </span>
-                  <span className="text-xs text-gray-600">
-                    Protected by SSL
-                  </span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <span className="text-2xl mb-2">📞</span>
-                  <span className="text-sm font-medium text-[#de5422]">
-                    24/7 Support
-                  </span>
-                  <span className="text-xs text-gray-600">
-                    Always here to help
-                  </span>
                 </div>
               </div>
             </div>
           </div>
+
+          </div>
         </div>
       </div>
+
+      {/* Mobile Bottom Padding for Fixed Navigation */}
+      {currentStep !== 3 && <div className="md:hidden h-20"></div>}
     </div>
   );
 }
