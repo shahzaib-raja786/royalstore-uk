@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion"; // For enhanced animations[citation:2]
 // Import a variety of Lucide icons[citation:1]
-import { Sofa, TableLamp, Armchair, Warehouse, Box, ShoppingBag, Sparkles, ArrowRight } from "lucide-react";
+import { Sofa, Lamp, Armchair, Warehouse, Box, ShoppingBag, Sparkles, ArrowRight } from "lucide-react";
 
 export default function CategoryShowcase() {
   const [categories, setCategories] = useState([]);
@@ -13,7 +13,7 @@ export default function CategoryShowcase() {
   // Map category names to specific icons for better visual meaning
   const categoryIconMap = {
     "Sofas": Sofa,
-    "Lighting": TableLamp,
+    "Lighting": Lamp,
     "Chairs": Armchair,
     "Storage": Warehouse,
     "All": Box,
