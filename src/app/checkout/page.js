@@ -918,17 +918,7 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
-                  {/* Terms Checkbox */}
-                  <div className="flex items-start gap-3 p-4 bg-orange-50 rounded-xl border border-orange-100 mb-8">
-                    <input
-                      type="checkbox"
-                      required
-                      className="mt-1 w-5 h-5 text-[#de5422] border-orange-300 rounded focus:ring-[#de5422]"
-                    />
-                    <span className="text-gray-700 text-sm">
-                      I have read and agree to the Terms & Conditions and Privacy Policy
-                    </span>
-                  </div>
+
 
                   {/* Desktop Navigation and Place Order */}
                   <div className="hidden md:flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
