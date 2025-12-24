@@ -15,7 +15,6 @@ export async function POST(req) {
         await connectDB();
 
         // ✅ Verify admin authentication
-        // ✅ Verify admin authentication
         const auth = await verifyAdminAuth();
         if (!auth.authenticated) {
             return NextResponse.json(
@@ -141,7 +140,6 @@ export async function GET(req) {
     try {
         await connectDB();
 
-        // ✅ Verify admin authentication
         // ✅ Verify admin authentication
         const auth = await verifyAdminAuth();
         if (!auth.authenticated) {
