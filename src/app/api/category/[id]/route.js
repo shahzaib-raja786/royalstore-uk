@@ -2,10 +2,11 @@ import Category from "@/models/Category";
 import { connectDB } from "@/lib/db";
 
 // ✅ Update Category
+// ✅ Update Category
 export async function PUT(req, { params }) {
   try {
     await connectDB();
-    const { id } = params;
+    const { id } = await params;
     const body = await req.json();
 
     // Ensure subcategories are included if present
@@ -26,7 +27,7 @@ export async function PUT(req, { params }) {
 export async function DELETE(req, { params }) {
   try {
     await connectDB();
-    const { id } = params;
+    const { id } = await params;
     await Category.findByIdAndDelete(id);
     return Response.json({ message: "Category deleted" }, { status: 200 });
   } catch (error) {

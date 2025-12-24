@@ -18,7 +18,7 @@ export async function GET(req, { params }) {
     const order = await Order.findOne({
       _id: orderId,
       user: userId
-    }).populate("items.product", "name");
+    }).populate("items.product", "name thumbnail");
 
     if (!order) {
       return NextResponse.json({ success: false, message: "Order not found" }, { status: 404 });
@@ -48,6 +48,7 @@ export async function GET(req, { params }) {
       // Products with only essential info
       products: order.items.map(item => ({
         productName: item.product?.name || "Product Name Not Available",
+        image: item.product?.thumbnail,
         quantity: item.quantity,
         price: item.priceAtPurchase,
         total: item.quantity * item.priceAtPurchase,
