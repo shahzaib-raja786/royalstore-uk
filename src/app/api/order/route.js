@@ -41,6 +41,9 @@ export async function POST(req) {
       discount: body.discount || 0,
       discountPercentage: body.discountPercentage || 0,
       paymentMethod: body.paymentMethod,
+      paymentStatus: body.paymentStatus || "pending",
+      paymentIntentId: body.paymentIntentId || null,
+      stripeSessionId: body.stripeSessionId || null,
       couponCode: body.couponCode || null,
       shippingAddress: body.shippingAddress,
       status: "pending", // default status

@@ -28,7 +28,7 @@ import {
   Rocket
 } from "lucide-react";
 
-export default function AdminOverview() {
+export default function AdminOverview({ onTabChange }) {
   const [stats, setStats] = useState({
     overview: {
       totalProducts: 0,
@@ -86,7 +86,8 @@ export default function AdminOverview() {
       borderColor: "border-purple-200",
       change: "+12%",
       changeType: "positive",
-      description: "Active products in store"
+      description: "Active products in store",
+      tabId: "products"
     },
     {
       title: "Total Orders",
@@ -97,7 +98,8 @@ export default function AdminOverview() {
       borderColor: "border-blue-200",
       change: "+8%",
       changeType: "positive",
-      description: "All time orders"
+      description: "All time orders",
+      tabId: "orders"
     },
     {
       title: "Total Users",
@@ -108,7 +110,8 @@ export default function AdminOverview() {
       borderColor: "border-green-200",
       change: "+15%",
       changeType: "positive",
-      description: "Registered customers"
+      description: "Registered customers",
+      tabId: "admins"
     },
     {
       title: "Total Revenue",
@@ -119,7 +122,8 @@ export default function AdminOverview() {
       borderColor: "border-amber-200",
       change: "+23%",
       changeType: "positive",
-      description: "Lifetime revenue"
+      description: "Lifetime revenue",
+      tabId: "orders"
     },
     {
       title: "Pending Orders",
@@ -130,7 +134,8 @@ export default function AdminOverview() {
       borderColor: "border-yellow-200",
       change: "-5%",
       changeType: "negative",
-      description: "Awaiting processing"
+      description: "Awaiting processing",
+      tabId: "orders"
     },
     {
       title: "Today's Orders",
@@ -141,7 +146,8 @@ export default function AdminOverview() {
       borderColor: "border-red-200",
       change: "+3%",
       changeType: "positive",
-      description: "Orders today"
+      description: "Orders today",
+      tabId: "orders"
     },
     {
       title: "Categories",
@@ -152,7 +158,8 @@ export default function AdminOverview() {
       borderColor: "border-indigo-200",
       change: "+2%",
       changeType: "positive",
-      description: "Product categories"
+      description: "Product categories",
+      tabId: "categories"
     },
     {
       title: "NEWS",
@@ -163,7 +170,8 @@ export default function AdminOverview() {
       borderColor: "border-teal-200",
       change: "+7%",
       changeType: "positive",
-      description: "Published articles"
+      description: "Published articles",
+      tabId: "news"
     },
     {
       title: "Cancellation Requests",
@@ -174,7 +182,8 @@ export default function AdminOverview() {
       borderColor: "border-orange-200",
       change: stats.overview.cancellationRequests > 0 ? "Needs attention" : "All clear",
       changeType: stats.overview.cancellationRequests > 0 ? "negative" : "positive",
-      description: "Pending review"
+      description: "Pending review",
+      tabId: "cancellations"
     },
     {
       title: "Return Requests",
@@ -185,7 +194,20 @@ export default function AdminOverview() {
       borderColor: "border-blue-200",
       change: stats.overview.returnRequests > 0 ? "Needs attention" : "All clear",
       changeType: stats.overview.returnRequests > 0 ? "negative" : "positive",
-      description: "Pending approval"
+      description: "Pending approval",
+      tabId: "returns"
+    },
+    {
+      title: "Pending Refunds",
+      value: stats.overview.pendingRefunds || 0,
+      icon: DollarSign,
+      color: "from-green-600 to-emerald-600",
+      bgColor: "bg-gradient-to-br from-green-50 to-emerald-50",
+      borderColor: "border-green-200",
+      change: (stats.overview.pendingRefunds || 0) > 0 ? "Needs attention" : "All clear",
+      changeType: (stats.overview.pendingRefunds || 0) > 0 ? "negative" : "positive",
+      description: "Awaiting approval",
+      tabId: "refunds"
     }
   ];
 
@@ -297,7 +319,8 @@ export default function AdminOverview() {
               scale: 1.02,
               transition: { duration: 0.2 }
             }}
-            className={`relative ${card.bgColor} rounded-2xl p-6 border-2 ${card.borderColor} shadow-lg hover:shadow-xl transition-all duration-300 group overflow-hidden`}
+            onClick={() => card.tabId && onTabChange && onTabChange(card.tabId)}
+            className={`relative ${card.bgColor} rounded-2xl p-6 border-2 ${card.borderColor} shadow-lg hover:shadow-xl transition-all duration-300 group overflow-hidden ${card.tabId ? 'cursor-pointer' : ''}`}
           >
             {/* Background Gradient Effect */}
             <div className={`absolute inset-0 bg-gradient-to-br ${card.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>

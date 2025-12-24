@@ -25,6 +25,7 @@ import {
   CheckCircle,
   AlertCircle
 } from "lucide-react";
+import ConfirmModal from "@/components/ConfirmModal"; // Assuming ConfirmModal is in this path
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
@@ -36,6 +37,10 @@ export default function AdminOrders() {
   const [buttonLoading, setButtonLoading] = useState({});
   const [simpleOrderData, setSimpleOrderData] = useState({});
   const [mobileMenuOpen, setMobileMenuOpen] = useState(null);
+
+  // Refund State
+  const [showRefundConfirm, setShowRefundConfirm] = useState(false);
+  const [refundOrderId, setRefundOrderId] = useState(null);
 
   // Auto Assign State
   const [autoAssignModal, setAutoAssignModal] = useState(false);
@@ -54,6 +59,32 @@ export default function AdminOrders() {
 
   // Stats
   const [todayStats, setTodayStats] = useState({ count: 0, revenue: 0 });
+
+  // ✅ Handle Refund
+  const handleRefund = async (orderId) => {
+    setButtonLoading(prev => ({ ...prev, [orderId]: true }));
+    try {
+      const res = await fetch(`/api/admin/order/${orderId}/refund`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Refund processed successfully!");
+        fetchOrders(); // Refresh to update status
+      } else {
+        toast.error(data.message || "Failed to process refund");
+      }
+    } catch (error) {
+      console.error("Error processing refund:", error);
+      toast.error("An error occurred during refund processing");
+    } finally {
+      setButtonLoading(prev => ({ ...prev, [orderId]: false }));
+      setShowRefundConfirm(false);
+      setRefundOrderId(null);
+    }
+  };
 
   // ✅ Fetch orders
   const fetchOrders = async () => {
@@ -840,7 +871,36 @@ export default function AdminOrders() {
                                                 <span className="text-gray-600">Method:</span>
                                                 <span className="font-medium capitalize">{order.paymentMethod}</span>
                                               </div>
+                                              <div className="flex justify-between text-sm mt-1">
+                                                <span className="text-gray-600">Payment Status:</span>
+                                                <span className={`font-semibold capitalize ${order.paymentStatus === "paid" ? "text-green-600" :
+                                                  order.paymentStatus === "refunded" ? "text-orange-600" :
+                                                    "text-yellow-600"
+                                                  }`}>{order.paymentStatus}</span>
+                                              </div>
+
+                                              {/* Stripe Refund Button */}
+                                              {order.paymentMethod === "stripe" &&
+                                                order.paymentStatus === "paid" &&
+                                                ["cancelled", "returned"].includes(order.status) && (
+                                                  <button
+                                                    onClick={() => {
+                                                      setRefundOrderId(order._id);
+                                                      setShowRefundConfirm(true);
+                                                    }}
+                                                    disabled={buttonLoading[order._id]}
+                                                    className="w-full mt-4 bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                                                  >
+                                                    {buttonLoading[order._id] ? (
+                                                      <Loader className="w-4 h-4 animate-spin" />
+                                                    ) : (
+                                                      <DollarSign className="w-4 h-4" />
+                                                    )}
+                                                    Issue Stripe Refund
+                                                  </button>
+                                                )}
                                             </div>
+
                                           </div>
                                         </>
                                       ) : (
@@ -1001,6 +1061,19 @@ export default function AdminOrders() {
         )}
       </AnimatePresence>
 
+      {/* Refund Confirmation Modal */}
+      <ConfirmModal
+        show={showRefundConfirm}
+        title="Issue Stripe Refund?"
+        message="Are you sure you want to issue a Stripe refund for this order? This action will return the payment to the customer and cannot be undone."
+        yesText="Confirm Refund"
+        variant="warning"
+        onYes={() => handleRefund(refundOrderId)}
+        onNo={() => {
+          setShowRefundConfirm(false);
+          setRefundOrderId(null);
+        }}
+      />
     </div>
   );
 }

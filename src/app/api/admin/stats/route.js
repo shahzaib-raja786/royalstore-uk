@@ -49,6 +49,13 @@ export async function GET(req) {
     const deliveredOrders = orders.filter(order => order.status === "delivered").length;
     const cancelledOrders = orders.filter(order => order.status === "cancelled").length;
 
+    // Pending Refunds (Stripe paid but cancelled/returned)
+    const pendingRefunds = orders.filter(order =>
+      order.paymentMethod === "stripe" &&
+      order.paymentStatus === "paid" &&
+      ["cancelled", "returned"].includes(order.status)
+    ).length;
+
     // Today's data
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -162,7 +169,8 @@ export async function GET(req) {
         monthlyOrders,
         monthlyRevenue,
         weeklyOrders,
-        weeklyRevenue
+        weeklyRevenue,
+        pendingRefunds
       },
       orderStatus: {
         pending: pendingOrders,

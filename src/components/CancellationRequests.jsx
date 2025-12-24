@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
+import ConfirmModal from "./ConfirmModal";
 import {
     AlertCircle,
     CheckCircle,
@@ -13,16 +14,21 @@ import {
     Calendar,
     Package,
     Truck,
+    DollarSign, // Added for refund button
+    Loader, // Added for processing state
 } from "lucide-react";
 
 export default function CancellationRequests() {
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
+    const [searchTerm, setSearchTerm] = useState(""); // Added state
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [modalAction, setModalAction] = useState(null);
     const [adminNote, setAdminNote] = useState("");
+    const [showRefundConfirm, setShowRefundConfirm] = useState(false); // Added state
+    const [refundOrderId, setRefundOrderId] = useState(null); // Added state
 
     useEffect(() => {
         fetchRequests();
@@ -85,10 +91,41 @@ export default function CancellationRequests() {
         }
     };
 
+    // ✅ Handle Manual Stripe Refund
+    const handleRefund = async (orderId) => {
+        setProcessingId(orderId);
+        try {
+            const res = await fetch(`/api/admin/order/${orderId}/refund`, {
+                method: "POST",
+                credentials: "include"
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                toast.success(data.message);
+                await fetchRequests(); // Refresh the list
+            } else {
+                toast.error(data.message || "Failed to issue refund");
+            }
+        } catch (error) {
+            console.error("Error issuing refund:", error);
+            toast.error("An error occurred while processing the refund");
+        } finally {
+            setProcessingId(null);
+            setShowRefundConfirm(false);
+            setRefundOrderId(null);
+        }
+    };
+
     const openModal = (request, action) => {
         setSelectedRequest(request);
         setModalAction(action);
         setShowModal(true);
+    };
+
+    const openRefundConfirmModal = (orderId) => {
+        setRefundOrderId(orderId);
+        setShowRefundConfirm(true);
     };
 
     if (loading) {
@@ -144,6 +181,7 @@ export default function CancellationRequests() {
                             request={request}
                             onApprove={() => openModal(request, "approve")}
                             onReject={() => openModal(request, "reject")}
+                            onRefundClick={() => openRefundConfirmModal(request._id)} // Pass the new handler
                             isProcessing={processingId === request._id}
                         />
                     ))}
@@ -174,8 +212,8 @@ export default function CancellationRequests() {
                             {/* Modal Header */}
                             <div
                                 className={`px-6 py-4 ${modalAction === "approve"
-                                        ? "bg-gradient-to-r from-green-600 to-emerald-600"
-                                        : "bg-gradient-to-r from-red-600 to-orange-600"
+                                    ? "bg-gradient-to-r from-green-600 to-emerald-600"
+                                    : "bg-gradient-to-r from-red-600 to-orange-600"
                                     }`}
                             >
                                 <div className="flex items-center gap-3">
@@ -257,8 +295,8 @@ export default function CancellationRequests() {
                                     onClick={() => handleAction(modalAction)}
                                     disabled={processingId === selectedRequest._id}
                                     className={`px-4 py-2 text-white rounded-lg transition-colors font-medium ${modalAction === "approve"
-                                            ? "bg-green-600 hover:bg-green-700"
-                                            : "bg-red-600 hover:bg-red-700"
+                                        ? "bg-green-600 hover:bg-green-700"
+                                        : "bg-red-600 hover:bg-red-700"
                                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                                 >
                                     {processingId === selectedRequest._id
@@ -270,12 +308,26 @@ export default function CancellationRequests() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Refund Confirmation Modal */}
+            <ConfirmModal
+                show={showRefundConfirm}
+                title="Issue Stripe Refund?"
+                message="Are you sure you want to issue a Stripe refund for this order? This action will return the payment to the customer and cannot be undone."
+                yesText="Confirm Refund"
+                variant="warning"
+                onYes={() => handleRefund(refundOrderId)}
+                onNo={() => {
+                    setShowRefundConfirm(false);
+                    setRefundOrderId(null);
+                }}
+            />
         </div>
     );
 }
 
 // Request Card Component
-function RequestCard({ request, onApprove, onReject, isProcessing }) {
+function RequestCard({ request, onApprove, onReject, onRefundClick, isProcessing }) {
     const [expanded, setExpanded] = useState(false);
 
     return (
@@ -314,6 +366,15 @@ function RequestCard({ request, onApprove, onReject, isProcessing }) {
                                     <span>{request.deliveryRoute.city}</span>
                                 </div>
                             )}
+                            <div className="flex items-center gap-2">
+                                <span className="text-gray-500 font-medium">Payment:</span>
+                                <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${request.paymentStatus === "paid" ? "bg-green-100 text-green-700" :
+                                    request.paymentStatus === "refunded" ? "bg-orange-100 text-orange-700" :
+                                        "bg-yellow-100 text-yellow-700"
+                                    }`}>
+                                    {request.paymentStatus || "pending"}
+                                </span>
+                            </div>
                         </div>
 
                         {/* Cancellation Reason */}
@@ -346,8 +407,23 @@ function RequestCard({ request, onApprove, onReject, isProcessing }) {
                             Approve
                         </button>
                     </div>
+
+                    {/* Stripe Refund Button (for already cancelled/returned orders in this list) */}
+                    {request.paymentMethod === "stripe" &&
+                        request.paymentStatus === "paid" &&
+                        ["cancelled", "returned"].includes(request.status) && (
+                            <button
+                                onClick={() => handleRefund(request._id)}
+                                disabled={isProcessing}
+                                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium disabled:opacity-50 flex items-center gap-2"
+                            >
+                                <DollarSign className="w-4 h-4" />
+                                Issue Stripe Refund
+                            </button>
+                        )}
                 </div>
             </div>
         </div>
     );
 }
+

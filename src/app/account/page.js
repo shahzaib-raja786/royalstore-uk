@@ -836,6 +836,14 @@ function OrderCard({ order, onReview, onCancelRequest, onReturnRequest, type = "
                 </span>
               </div>
             )}
+            <div className="flex items-center gap-2">
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${order.paymentStatus === "paid" ? "bg-green-100 text-green-700" :
+                  order.paymentStatus === "refunded" ? "bg-orange-100 text-orange-700" :
+                    "bg-yellow-100 text-yellow-700"
+                }`}>
+                Payment: {order.paymentStatus || "pending"}
+              </span>
+            </div>
           </div>
 
           {/* Action Buttons - Stacked on Mobile */}

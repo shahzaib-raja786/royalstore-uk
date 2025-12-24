@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
+import ConfirmModal from "./ConfirmModal";
 import {
     AlertCircle,
     CheckCircle,
@@ -10,16 +11,21 @@ import {
     User,
     Package,
     Calendar,
+    DollarSign,
+    Loader,
 } from "lucide-react";
 
 export default function ReturnRequests() {
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
+    const [searchTerm, setSearchTerm] = useState("");
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [modalAction, setModalAction] = useState(null);
     const [adminNote, setAdminNote] = useState("");
+    const [showRefundConfirm, setShowRefundConfirm] = useState(false);
+    const [refundOrderId, setRefundOrderId] = useState(null);
 
     useEffect(() => {
         fetchRequests();
@@ -82,6 +88,32 @@ export default function ReturnRequests() {
         }
     };
 
+    // ✅ Handle Manual Stripe Refund
+    const handleRefund = async (orderId) => {
+        setProcessingId(orderId);
+        try {
+            const res = await fetch(`/api/admin/order/${orderId}/refund`, {
+                method: "POST",
+                credentials: "include"
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                toast.success(data.message);
+                fetchRequests();
+            } else {
+                toast.error(data.message || "Failed to issue refund");
+            }
+        } catch (error) {
+            console.error("Error issuing refund:", error);
+            toast.error("An error occurred while processing the refund");
+        } finally {
+            setProcessingId(null);
+            setShowRefundConfirm(false);
+            setRefundOrderId(null);
+        }
+    };
+
     const openModal = (request, action) => {
         setSelectedRequest(request);
         setModalAction(action);
@@ -133,6 +165,10 @@ export default function ReturnRequests() {
                             request={request}
                             onApprove={() => openModal(request, "approve")}
                             onReject={() => openModal(request, "reject")}
+                            onRefund={() => {
+                                setRefundOrderId(request._id);
+                                setShowRefundConfirm(true);
+                            }}
                             isProcessing={processingId === request._id}
                         />
                     ))}
@@ -175,11 +211,25 @@ export default function ReturnRequests() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Refund Confirmation Modal */}
+            <ConfirmModal
+                show={showRefundConfirm}
+                title="Issue Stripe Refund?"
+                message="Are you sure you want to issue a Stripe refund for this order? This action will return the payment to the customer and cannot be undone."
+                yesText="Confirm Refund"
+                variant="warning"
+                onYes={() => handleRefund(refundOrderId)}
+                onNo={() => {
+                    setShowRefundConfirm(false);
+                    setRefundOrderId(null);
+                }}
+            />
         </div>
     );
 }
 
-function RequestCard({ request, onApprove, onReject, isProcessing }) {
+function RequestCard({ request, onApprove, onReject, onRefund, isProcessing }) {
     return (
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200 hover:shadow-xl transition-all duration-300">
             <div className="p-6 border-b border-gray-200">
@@ -208,8 +258,26 @@ function RequestCard({ request, onApprove, onReject, isProcessing }) {
                     </div>
 
                     <div className="flex gap-3">
-                        <button onClick={onReject} disabled={isProcessing} className="px-4 py-2 bg-red-50 border-2 border-red-500 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"><XCircle className="w-4 h-4" />Reject</button>
                         <button onClick={onApprove} disabled={isProcessing} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"><CheckCircle className="w-4 h-4" />Approve</button>
+                        <button onClick={onReject} disabled={isProcessing} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"><XCircle className="w-4 h-4" />Reject</button>
+
+                        {/* Stripe Refund Button */}
+                        {request.paymentMethod === "stripe" &&
+                            request.paymentStatus === "paid" &&
+                            request.status === "approved" && (
+                                <button
+                                    onClick={onRefund}
+                                    disabled={isProcessing}
+                                    className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {isProcessing ? (
+                                        <Loader className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <DollarSign className="w-4 h-4" />
+                                    )}
+                                    Issue Stripe Refund
+                                </button>
+                            )}
                     </div>
                 </div>
             </div>

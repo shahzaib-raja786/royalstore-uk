@@ -6,6 +6,9 @@ import User from "@/models/User";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 import { verifyAdminAuth } from "@/lib/adminAuth";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(req) {
     try {
@@ -61,6 +64,7 @@ export async function POST(req) {
 
         if (action === "approve") {
             // ✅ Approve cancellation - cancel the order
+
             order.status = "cancelled";
             order.cancelledBy = "admin";
 

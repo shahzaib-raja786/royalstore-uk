@@ -4,6 +4,9 @@ import Order from "@/models/Order";
 import DeliveryRoute from "@/models/DeliveryRoute";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(req) {
     try {
@@ -124,7 +127,6 @@ export async function POST(req) {
             );
         }
 
-        // ✅ Cancel the order
         order.status = "cancelled";
         order.cancellationReason = reason || "Cancelled by user";
         order.cancellationRequestedAt = new Date();

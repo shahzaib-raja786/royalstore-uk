@@ -17,6 +17,7 @@ import AdminManagement from "@/components/AdminManagement";
 import CompanyProfileManager from "@/components/CompanyProfileManager";
 import CancellationRequests from "@/components/CancellationRequests";
 import ReturnRequests from "@/components/ReturnRequests";
+import RefundRequests from "@/components/RefundRequests";
 import { Settings } from "lucide-react";
 import { authService } from "@/lib/auth";
 
@@ -75,7 +76,7 @@ export default function Dashboard() {
   const renderContent = () => {
     switch (activeTab) {
       case "overview":
-        return <AdminOverview />;
+        return <AdminOverview onTabChange={setActiveTab} />;
       case "products":
         return <ProductManager />;
       case "categories":
@@ -98,6 +99,8 @@ export default function Dashboard() {
         return <CancellationRequests />;
       case "returns":
         return <ReturnRequests />;
+      case "refunds":
+        return <RefundRequests />;
       case "admins":
         return <AdminManagement />;
       case "profile":
@@ -122,6 +125,7 @@ export default function Dashboard() {
     { id: "orders", label: "Order Management", icon: "📦" },
     { id: "cancellations", label: "Cancellation Requests", icon: "🚫" },
     { id: "returns", label: "Return Requests", icon: "↩️" },
+    { id: "refunds", label: "Refund Approvals", icon: "💰" },
     { id: "news", label: "News Management", icon: "✍️" },
     { id: "admins", label: "Manage User", icon: "🛡️" },
     { id: "settings", label: "Settings", icon: <Settings className="w-5 h-5" /> },

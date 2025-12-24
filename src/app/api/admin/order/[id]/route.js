@@ -3,6 +3,10 @@ import Order from "@/models/Order";
 import User from "@/models/User";
 import { verifyAdminAuth } from "@/lib/adminAuth";
 
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
 // ✅ PATCH: Update order status (Admin only)
 export async function PATCH(req, { params }) {
   try {
@@ -16,6 +20,13 @@ export async function PATCH(req, { params }) {
 
     const paramsData = await params;
     const { status } = await req.json();
+
+    // Fetch the order first to check current payment status
+    const order = await Order.findById(paramsData.id);
+    if (!order) {
+      return Response.json({ error: "Order not found" }, { status: 404 });
+    }
+
     const updatedOrder = await Order.findByIdAndUpdate(
       paramsData.id,
       { status },
@@ -23,10 +34,6 @@ export async function PATCH(req, { params }) {
     )
       .populate("user", "name email")
       .populate("items.product", "name price image");
-
-    if (!updatedOrder) {
-      return Response.json({ error: "Order not found" }, { status: 404 });
-    }
 
     return Response.json({ success: true, order: updatedOrder }, { status: 200 });
   } catch (error) {

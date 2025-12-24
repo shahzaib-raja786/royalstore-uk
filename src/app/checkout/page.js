@@ -2,7 +2,13 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Check, ArrowLeft } from "lucide-react";
+import { ChevronRight, Check, ArrowLeft, Loader } from "lucide-react";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import CheckoutForm from "@/components/CheckoutForm";
+
+// Initialize Stripe outside of component to avoid recreating stripe object on every render
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState(null);
@@ -30,6 +36,7 @@ export default function CheckoutPage() {
     stripe: false,
   });
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cod");
+  const [clientSecret, setClientSecret] = useState("");
   const Router = useRouter();
 
   // Fetch cart and user data
@@ -82,6 +89,20 @@ export default function CheckoutPage() {
     ) || 0;
 
   const total = Math.max(subtotal - discount, 0);
+
+  // Fetch Payment Intent when Stripe is selected
+  useEffect(() => {
+    if (selectedPaymentMethod === "stripe" && total > 0) {
+      // Create PaymentIntent as soon as the page loads
+      fetch("/api/create-payment-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: total, currency: "gbp" }),
+      })
+        .then((res) => res.json())
+        .then((data) => setClientSecret(data.clientSecret));
+    }
+  }, [selectedPaymentMethod, total]);
 
   // Form handling
   const handleInputChange = (e) => {
@@ -163,8 +184,7 @@ export default function CheckoutPage() {
         setDiscount(data.discountAmount || 0);
         setDiscountPercentage(data.discountPercentage || 0);
         setCouponMessage(
-          `🎉 Coupon applied! ${
-            data.discountPercentage ? `${data.discountPercentage}% off` : ""
+          `🎉 Coupon applied! ${data.discountPercentage ? `${data.discountPercentage}% off` : ""
           } Saved: £${data.discountAmount}`
         );
       } else {
@@ -181,48 +201,10 @@ export default function CheckoutPage() {
   };
 
   // Enhanced Place Order Function with better error handling
-  const handlePlaceOrder = async (e) => {
-    e.preventDefault();
-
-    if (!validateStep1()) {
-      setCurrentStep(1);
-      const firstError = Object.keys(formErrors)[0];
-      document.querySelector(`[name="${firstError}"]`)?.focus();
-      return;
-    }
-
-    if (!cart?.items?.length) {
-      alert("Your cart is empty");
-      return;
-    }
-
+  const createOrder = async (additionalData = {}) => {
     setIsLoading(true);
 
     try {
-      // Handle Stripe Payment
-      if (selectedPaymentMethod === "stripe") {
-        const res = await fetch("/api/checkout/stripe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            items: cart.items,
-            email: formData.email,
-          }),
-        });
-        const data = await res.json();
-
-        if (!res.ok) {
-          alert(data.message || data.error || "Stripe payment failed");
-          setIsLoading(false);
-          return;
-        }
-
-        alert("Stripe session created (Mock): " + JSON.stringify(data));
-        setIsLoading(false);
-        return;
-      }
-
-      // Handle COD (Existing Logic)
       const orderData = {
         items: cart.items.map((item) => {
           const customizations =
@@ -262,6 +244,7 @@ export default function CheckoutPage() {
         },
 
         saveAddress: formData.saveAddress,
+        ...additionalData // Merge Stripe data (paymentIntentId, status, etc)
       };
 
       const res = await fetch("/api/order", {
@@ -292,8 +275,8 @@ export default function CheckoutPage() {
       } else {
         alert(
           data.error ||
-            data.message ||
-            "Failed to place order. Please try again."
+          data.message ||
+          "Failed to place order. Please try again."
         );
       }
     } catch (err) {
@@ -302,6 +285,40 @@ export default function CheckoutPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePlaceOrder = async (e) => {
+    e.preventDefault();
+
+    if (!validateStep1()) {
+      setCurrentStep(1);
+      const firstError = Object.keys(formErrors)[0];
+      document.querySelector(`[name="${firstError}"]`)?.focus();
+      return;
+    }
+
+    if (!cart?.items?.length) {
+      alert("Your cart is empty");
+      return;
+    }
+
+    // Handle Stripe Payment - Logic delegated to CheckoutForm
+    if (selectedPaymentMethod === "stripe") {
+      // Do nothing here, the form in Step 3 handles it
+      return;
+    }
+
+    // Handle COD
+    await createOrder();
+  };
+
+  const handleStripeSuccess = async (paymentIntent) => {
+    await createOrder({
+      paymentMethod: "stripe",
+      paymentStatus: "paid",
+      paymentIntentId: paymentIntent.id,
+      stripeSessionId: paymentIntent.id // using intent ID as session ID reference
+    });
   };
 
   // Remove coupon
@@ -360,11 +377,10 @@ export default function CheckoutPage() {
               }}
             >
               <div
-                className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center mb-2 transition-all duration-300 ${
-                  currentStep >= step.number
-                    ? "bg-gradient-to-r from-[#de5422] to-orange-500 text-white"
-                    : "bg-gray-200 text-gray-400"
-                }`}
+                className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center mb-2 transition-all duration-300 ${currentStep >= step.number
+                  ? "bg-gradient-to-r from-[#de5422] to-orange-500 text-white"
+                  : "bg-gray-200 text-gray-400"
+                  }`}
               >
                 {currentStep > step.number ? (
                   <Check className="w-6 h-6 md:w-7 md:h-7" />
@@ -375,11 +391,10 @@ export default function CheckoutPage() {
                 )}
               </div>
               <span
-                className={`text-sm md:text-base font-medium ${
-                  currentStep >= step.number
-                    ? "text-[#de5422]"
-                    : "text-gray-400"
-                }`}
+                className={`text-sm md:text-base font-medium ${currentStep >= step.number
+                  ? "text-[#de5422]"
+                  : "text-gray-400"
+                  }`}
               >
                 {step.label}
               </span>
@@ -441,11 +456,10 @@ export default function CheckoutPage() {
                           value={formData.firstName}
                           onChange={handleInputChange}
                           placeholder="John"
-                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${
-                            formErrors.firstName
-                              ? "border-red-500"
-                              : "border-gray-200"
-                          }`}
+                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${formErrors.firstName
+                            ? "border-red-500"
+                            : "border-gray-200"
+                            }`}
                           required
                         />
                         {formErrors.firstName && (
@@ -464,11 +478,10 @@ export default function CheckoutPage() {
                           value={formData.lastName}
                           onChange={handleInputChange}
                           placeholder="Doe"
-                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${
-                            formErrors.lastName
-                              ? "border-red-500"
-                              : "border-gray-200"
-                          }`}
+                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${formErrors.lastName
+                            ? "border-red-500"
+                            : "border-gray-200"
+                            }`}
                           required
                         />
                         {formErrors.lastName && (
@@ -489,11 +502,10 @@ export default function CheckoutPage() {
                         value={formData.streetAddress}
                         onChange={handleInputChange}
                         placeholder="123 Main Street"
-                        className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${
-                          formErrors.streetAddress
-                            ? "border-red-500"
-                            : "border-gray-200"
-                        }`}
+                        className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${formErrors.streetAddress
+                          ? "border-red-500"
+                          : "border-gray-200"
+                          }`}
                         required
                       />
                       {formErrors.streetAddress && (
@@ -514,9 +526,8 @@ export default function CheckoutPage() {
                           value={formData.city}
                           onChange={handleInputChange}
                           placeholder="London"
-                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${
-                            formErrors.city ? "border-red-500" : "border-gray-200"
-                          }`}
+                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${formErrors.city ? "border-red-500" : "border-gray-200"
+                            }`}
                           required
                         />
                         {formErrors.city && (
@@ -535,11 +546,10 @@ export default function CheckoutPage() {
                           value={formData.postalCode}
                           onChange={handleInputChange}
                           placeholder="SW1A 1AA"
-                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${
-                            formErrors.postalCode
-                              ? "border-red-500"
-                              : "border-gray-200"
-                          }`}
+                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${formErrors.postalCode
+                            ? "border-red-500"
+                            : "border-gray-200"
+                            }`}
                           required
                         />
                         {formErrors.postalCode && (
@@ -561,9 +571,8 @@ export default function CheckoutPage() {
                           value={formData.phone}
                           onChange={handleInputChange}
                           placeholder="+44 20 7946 0958"
-                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${
-                            formErrors.phone ? "border-red-500" : "border-gray-200"
-                          }`}
+                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${formErrors.phone ? "border-red-500" : "border-gray-200"
+                            }`}
                           required
                         />
                         {formErrors.phone && (
@@ -582,9 +591,8 @@ export default function CheckoutPage() {
                           value={formData.email}
                           onChange={handleInputChange}
                           placeholder="john@example.com"
-                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${
-                            formErrors.email ? "border-red-500" : "border-gray-200"
-                          }`}
+                          className={`w-full border-2 rounded-xl p-4 focus:ring-2 focus:ring-[#de5422]/20 focus:border-[#de5422] outline-none transition-all duration-300 ${formErrors.email ? "border-red-500" : "border-gray-200"
+                            }`}
                           required
                         />
                         {formErrors.email && (
@@ -653,7 +661,7 @@ export default function CheckoutPage() {
                   </div>
 
                   {/* Order Items */}
-                  
+
                   <div className="space-y-4 max-h-96 overflow-y-auto pr-2 mb-6 scrollbar-thin scrollbar-thumb-[#de5422]/40 scrollbar-track-gray-100">
                     {cart?.items?.length > 0 ? (
                       cart.items.map((item) => {
@@ -723,11 +731,10 @@ export default function CheckoutPage() {
 
                       {couponMessage && (
                         <div
-                          className={`mb-3 p-3 rounded-lg text-sm font-medium ${
-                            couponMessage.includes("applied")
-                              ? "bg-green-100 text-green-700 border border-green-300"
-                              : "bg-red-100 text-red-700 border border-red-300"
-                          }`}
+                          className={`mb-3 p-3 rounded-lg text-sm font-medium ${couponMessage.includes("applied")
+                            ? "bg-green-100 text-green-700 border border-green-300"
+                            : "bg-red-100 text-red-700 border border-red-300"
+                            }`}
                         >
                           {couponMessage}
                         </div>
@@ -821,20 +828,18 @@ export default function CheckoutPage() {
                     {/* Cash on Delivery */}
                     {paymentSettings.cod && (
                       <div
-                        className={`p-5 rounded-xl border-2 transition-all duration-300 cursor-pointer ${
-                          selectedPaymentMethod === "cod"
-                            ? "bg-gradient-to-r from-orange-50 to-amber-50 border-[#de5422] ring-2 ring-[#de5422]/30"
-                            : "bg-white border-gray-200 hover:border-[#de5422]/50"
-                        }`}
+                        className={`p-5 rounded-xl border-2 transition-all duration-300 cursor-pointer ${selectedPaymentMethod === "cod"
+                          ? "bg-gradient-to-r from-orange-50 to-amber-50 border-[#de5422] ring-2 ring-[#de5422]/30"
+                          : "bg-white border-gray-200 hover:border-[#de5422]/50"
+                          }`}
                         onClick={() => setSelectedPaymentMethod("cod")}
                       >
                         <div className="flex items-start gap-4">
                           <div
-                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 ${
-                              selectedPaymentMethod === "cod"
-                                ? "border-[#de5422] bg-[#de5422]"
-                                : "border-gray-300"
-                            }`}
+                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 ${selectedPaymentMethod === "cod"
+                              ? "border-[#de5422] bg-[#de5422]"
+                              : "border-gray-300"
+                              }`}
                           >
                             {selectedPaymentMethod === "cod" && (
                               <div className="w-2 h-2 rounded-full bg-white"></div>
@@ -855,20 +860,18 @@ export default function CheckoutPage() {
                     {/* Stripe */}
                     {paymentSettings.stripe && (
                       <div
-                        className={`p-5 rounded-xl border-2 transition-all duration-300 cursor-pointer ${
-                          selectedPaymentMethod === "stripe"
-                            ? "bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-500 ring-2 ring-purple-500/30"
-                            : "bg-white border-gray-200 hover:border-purple-500/50"
-                        }`}
+                        className={`p-5 rounded-xl border-2 transition-all duration-300 cursor-pointer ${selectedPaymentMethod === "stripe"
+                          ? "bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-500 ring-2 ring-purple-500/30"
+                          : "bg-white border-gray-200 hover:border-purple-500/50"
+                          }`}
                         onClick={() => setSelectedPaymentMethod("stripe")}
                       >
                         <div className="flex items-start gap-4">
                           <div
-                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 ${
-                              selectedPaymentMethod === "stripe"
-                                ? "border-purple-500 bg-purple-500"
-                                : "border-gray-300"
-                            }`}
+                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 ${selectedPaymentMethod === "stripe"
+                              ? "border-purple-500 bg-purple-500"
+                              : "border-gray-300"
+                              }`}
                           >
                             {selectedPaymentMethod === "stripe" && (
                               <div className="w-2 h-2 rounded-full bg-white"></div>
@@ -881,6 +884,15 @@ export default function CheckoutPage() {
                             <p className="text-gray-600 text-sm">
                               Pay securely using your credit or debit card
                             </p>
+
+                            {/* Render Stripe Element ONLY if selected */}
+                            {selectedPaymentMethod === "stripe" && clientSecret && (
+                              <div className="mt-4" onClick={(e) => e.stopPropagation()}>
+                                <Elements options={{ clientSecret, appearance: { theme: 'stripe' } }} stripe={stripePromise}>
+                                  <CheckoutForm amount={total} onSuccess={handleStripeSuccess} />
+                                </Elements>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -927,24 +939,26 @@ export default function CheckoutPage() {
                       <ArrowLeft className="w-4 h-4" />
                       Back to Order Summary
                     </button>
-                    
-                    <button
-                      onClick={handlePlaceOrder}
-                      disabled={isLoading || !cart?.items?.length}
-                      className="bg-gradient-to-r from-[#de5422] to-orange-500 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isLoading ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          Processing Order...
-                        </div>
-                      ) : (
-                        <>
-                          Place Order - £{total.toFixed(2)}
-                          <ChevronRight className="inline ml-2 w-5 h-5" />
-                        </>
-                      )}
-                    </button>
+
+                    {selectedPaymentMethod !== "stripe" && (
+                      <button
+                        onClick={handlePlaceOrder}
+                        disabled={isLoading || !cart?.items?.length}
+                        className="bg-gradient-to-r from-[#de5422] to-orange-500 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isLoading ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            Processing Order...
+                          </div>
+                        ) : (
+                          <>
+                            Place Order - £{total.toFixed(2)}
+                            <ChevronRight className="inline ml-2 w-5 h-5" />
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -957,11 +971,10 @@ export default function CheckoutPage() {
                   <button
                     onClick={handlePrevStep}
                     disabled={currentStep === 1}
-                    className={`flex items-center gap-2 px-4 py-3 rounded-lg ${
-                      currentStep === 1
-                        ? "text-gray-400 cursor-not-allowed"
-                        : "text-[#de5422] hover:bg-orange-50"
-                    }`}
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg ${currentStep === 1
+                      ? "text-gray-400 cursor-not-allowed"
+                      : "text-[#de5422] hover:bg-orange-50"
+                      }`}
                   >
                     <ArrowLeft className="w-4 h-4" />
                     Previous
@@ -980,111 +993,112 @@ export default function CheckoutPage() {
 
           {/* Right Column - Order Summary Panel */}
           <div
-  className={`lg:col-span-1 ${
-    currentStep === 1 ? "hidden lg:block" : ""
-  }`}
->
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 sticky top-6">
-              <div className="bg-gradient-to-r from-[#de5422] to-orange-500 p-6">
-                <h3 className="text-xl font-bold text-white">
-                  Order Total
-                </h3>
-                <p className="text-white/90 text-sm">
-                  {cart?.items?.length || 0} item{cart?.items?.length !== 1 ? "s" : ""} in cart
-                </p>
-              </div>
+            className={`lg:col-span-1 ${currentStep === 1 ? "hidden lg:block" : ""
+              }`}
+          >
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 sticky top-6">
+                <div className="bg-gradient-to-r from-[#de5422] to-orange-500 p-6">
+                  <h3 className="text-xl font-bold text-white">
+                    Order Total
+                  </h3>
+                  <p className="text-white/90 text-sm">
+                    {cart?.items?.length || 0} item{cart?.items?.length !== 1 ? "s" : ""} in cart
+                  </p>
+                </div>
 
-              <div className="p-6">
-                {/* Order Summary */}
-                <div className="space-y-3 mb-6">
-                  <div className="flex justify-between text-gray-600">
-                    <span>Subtotal</span>
-                    <span className="font-semibold">£{subtotal.toFixed(2)}</span>
+                <div className="p-6">
+                  {/* Order Summary */}
+                  <div className="space-y-3 mb-6">
+                    <div className="flex justify-between text-gray-600">
+                      <span>Subtotal</span>
+                      <span className="font-semibold">£{subtotal.toFixed(2)}</span>
+                    </div>
+
+                    {discount > 0 && (
+                      <div className="flex justify-between text-green-600">
+                        <span>
+                          Discount {discountPercentage > 0 && `(${discountPercentage}%)`}
+                        </span>
+                        <span className="font-semibold">-£{discount.toFixed(2)}</span>
+                      </div>
+                    )}
+
+                    <div className="border-t border-gray-200 pt-3">
+                      <div className="flex justify-between text-xl font-bold text-[#de5422]">
+                        <span>Total</span>
+                        <span>£{total.toFixed(2)}</span>
+                      </div>
+                      {discount > 0 && (
+                        <p className="text-sm text-green-600 text-right mt-1">
+                          You saved £{discount.toFixed(2)}!
+                        </p>
+                      )}
+                    </div>
                   </div>
 
-                  {discount > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>
-                        Discount {discountPercentage > 0 && `(${discountPercentage}%)`}
-                      </span>
-                      <span className="font-semibold">-£{discount.toFixed(2)}</span>
+                  {/* Current Step Info */}
+                  <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                    <h4 className="font-semibold text-gray-800 mb-2">Current Step</h4>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-[#de5422] text-white flex items-center justify-center font-bold">
+                        {currentStep}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-700">
+                          {currentStep === 1 && "Billing Details"}
+                          {currentStep === 2 && "Order Summary"}
+                          {currentStep === 3 && "Payment Method"}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Step {currentStep} of 3
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mobile Place Order Button - Only for step 3 */}
+                  {currentStep === 3 && (
+                    <div className="md:hidden">
+                      {selectedPaymentMethod !== "stripe" && (
+                        <button
+                          onClick={handlePlaceOrder}
+                          disabled={isLoading || !cart?.items?.length}
+                          className="w-full bg-gradient-to-r from-[#de5422] to-orange-500 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isLoading ? (
+                            <div className="flex items-center justify-center gap-2">
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Processing...
+                            </div>
+                          ) : (
+                            `Place Order - £${total.toFixed(2)}`
+                          )}
+                        </button>
+                      )}
+
+                      <button
+                        onClick={handlePrevStep}
+                        className="w-full mt-3 text-[#de5422] hover:text-orange-600 text-center py-3 font-medium"
+                      >
+                        ← Back to Order Summary
+                      </button>
                     </div>
                   )}
 
-                  <div className="border-t border-gray-200 pt-3">
-                    <div className="flex justify-between text-xl font-bold text-[#de5422]">
-                      <span>Total</span>
-                      <span>£{total.toFixed(2)}</span>
+                  {/* Need Help Section */}
+                  <div className="border-t border-gray-200 pt-6">
+                    <h4 className="font-semibold text-gray-800 mb-2">Need Help?</h4>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Contact our support team for assistance
+                    </p>
+                    <div className="text-sm text-[#de5422] hover:text-orange-600 font-medium">
+                      support@example.com
                     </div>
-                    {discount > 0 && (
-                      <p className="text-sm text-green-600 text-right mt-1">
-                        You saved £{discount.toFixed(2)}!
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Current Step Info */}
-                <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                  <h4 className="font-semibold text-gray-800 mb-2">Current Step</h4>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-[#de5422] text-white flex items-center justify-center font-bold">
-                      {currentStep}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-700">
-                        {currentStep === 1 && "Billing Details"}
-                        {currentStep === 2 && "Order Summary"}
-                        {currentStep === 3 && "Payment Method"}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Step {currentStep} of 3
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mobile Place Order Button - Only for step 3 */}
-                {currentStep === 3 && (
-                  <div className="md:hidden">
-                    <button
-                      onClick={handlePlaceOrder}
-                      disabled={isLoading || !cart?.items?.length}
-                      className="w-full bg-gradient-to-r from-[#de5422] to-orange-500 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isLoading ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          Processing...
-                        </div>
-                      ) : (
-                        `Place Order - £${total.toFixed(2)}`
-                      )}
-                    </button>
-                    
-                    <button
-                      onClick={handlePrevStep}
-                      className="w-full mt-3 text-[#de5422] hover:text-orange-600 text-center py-3 font-medium"
-                    >
-                      ← Back to Order Summary
-                    </button>
-                  </div>
-                )}
-
-                {/* Need Help Section */}
-                <div className="border-t border-gray-200 pt-6">
-                  <h4 className="font-semibold text-gray-800 mb-2">Need Help?</h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Contact our support team for assistance
-                  </p>
-                  <div className="text-sm text-[#de5422] hover:text-orange-600 font-medium">
-                    support@example.com
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
           </div>
         </div>
