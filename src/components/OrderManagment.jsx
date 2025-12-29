@@ -141,7 +141,7 @@ export default function AdminOrders() {
   // ✅ Fetch simplified order data
   const fetchSimpleOrderData = async (orderId) => {
     try {
-      const response = await fetch(`/api/order/${orderId}/simple`, {
+      const response = await fetch(`/api/admin/order/${orderId}`, {
         credentials: "include"
       });
       const data = await response.json();
