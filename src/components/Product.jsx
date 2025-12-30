@@ -249,8 +249,12 @@ export default function ProductManager() {
       await fetch(`/api/product/${userId}`, { method: "DELETE" });
       fetchProducts();
       setMobileMenuOpen(null);
+      setShowConfirmModal(false);
+      setUserId(null);
+      toast.success("Product deleted successfully");
     } catch (error) {
       console.error("Error deleting product:", error);
+      toast.error("Failed to delete product");
     }
   };
 
